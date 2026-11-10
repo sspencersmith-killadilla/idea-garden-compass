@@ -59,7 +59,7 @@ function AuthPage() {
     if (mode === "signup" && !data.session) setSent(true);
   }
 
-  async function oauth(p: "google" | "lovable") {
+  async function oauth(p: "google") {
     const r = await lovable.auth.signInWithOAuth(p, { redirect_uri: window.location.origin + "/auth" });
     if (r.error) toast.error(r.error.message ?? "Sign-in failed");
   }
@@ -77,7 +77,6 @@ function AuthPage() {
               <button type="button" onClick={() => oauth("google")} className="flex h-10 w-full items-center justify-center gap-2.5 rounded-md border border-[#747775] bg-[#FFFFFF] text-sm font-medium text-[#1F1F1F]">
                 <GoogleG /> Continue with Google
               </button>
-              <button type="button" className="lovable-auth-button w-full" onClick={() => oauth("lovable")}>Continue with Lovable</button>
             </div>
             <div className="my-5 flex items-center gap-3 text-xs text-muted-foreground"><div className="h-px flex-1 bg-border" />or<div className="h-px flex-1 bg-border" /></div>
             <form onSubmit={submit} className="space-y-3">
