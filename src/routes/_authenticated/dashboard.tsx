@@ -4,9 +4,11 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Search, LogOut, Mail, Loader2, Trash2, RotateCw, Send, Plus, Lock, Users, Settings, Copy, MessageSquare } from "lucide-react";
+import { Search, LogOut, Mail, BookOpen, Link2, ArrowRightLeft, Loader2, Trash2, RotateCw, Send, Plus, Lock, Users, Settings, Copy, MessageSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { captureIdea, organizeIdeaFn } from "@/lib/ideas.functions";
+import { captureIdea, organizeIdeaFn, setIdeaSharing, moveIdeaToTeam, getEmailInConfig } from "@/lib/ideas.functions";
+import { Switch } from "@/components/ui/switch";
+import { Link } from "@tanstack/react-router";
 import { PENDING_INVITE_KEY } from "@/lib/invite";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
@@ -18,7 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-const searchSchema = z.object({ space: z.string().optional() });
+const searchSchema = z.object({ space: z.string().optional(), idea: z.string().optional() });
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   validateSearch: searchSchema,
@@ -40,7 +42,7 @@ type Theme = { id: string; name: string; hue: number };
 type Item = { id: string; idea_id: string; text: string; done: boolean };
 type Idea = {
   id: string; user_id: string; raw_text: string; title: string | null; summary: string | null; tags: string[];
-  source: string; status: string; theme_id: string | null; created_at: string;
+  source: string; status: string; theme_id: string | null; created_at: string; share_token: string | null;
 };
 type Member = { user_id: string; role: string; name: string };
 
@@ -70,7 +72,7 @@ function useBoard(space: string | null, me: string | undefined) {
     queryKey: ["board", space ?? "personal"],
     enabled: !!me,
     queryFn: async () => {
-      const iq = supabase.from("ideas").select("id, user_id, raw_text, title, summary, tags, source, status, theme_id, created_at").order("created_at", { ascending: false });
+      const iq = supabase.from("ideas").select("id, user_id, raw_text, title, summary, tags, source, status, theme_id, created_at, share_token").order("created_at", { ascending: false });
       const tq = supabase.from("themes").select("id, name, hue").order("name");
       const [ideas, themes, members] = await Promise.all([
         space ? iq.eq("team_id", space) : iq.is("team_id", null).eq("user_id", me!),
@@ -99,7 +101,7 @@ function useBoard(space: string | null, me: string | undefined) {
 function Dashboard() {
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const { space: spaceParam } = Route.useSearch();
+  const { space: spaceParam, idea: ideaParam } = Route.useSearch();
   const meQ = useMe();
   const me = meQ.data;
   const team = me?.teams.find((t) => t.id === spaceParam) ?? null;
@@ -111,13 +113,13 @@ function Dashboard() {
   const organize = useServerFn(organizeIdeaFn);
   const [text, setText] = useState("");
   const [q, setQ] = useState("");
-  const [view, setView] = useState<"all" | "themes" | "todos">("all");
+  const [view, setView] = useState<"all" | "timeline" | "themes" | "todos">("all");
   const [sort, setSort] = useState("newest");
   const [tag, setTag] = useState("any");
   const [theme, setTheme] = useState("any");
   const [person, setPerson] = useState("any");
   const [openTodosOnly, setOpenTodosOnly] = useState(false);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(ideaParam ?? null);
   const [showEmail, setShowEmail] = useState(false);
   const [showNewTeam, setShowNewTeam] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -134,7 +136,9 @@ function Dashboard() {
     });
   }, [qc, navigate]);
 
-  useEffect(() => { setTag("any"); setTheme("any"); setPerson("any"); setSelected(null); }, [space]);
+  const firstSpace = useState(space)[0];
+  useEffect(() => { if (space !== firstSpace) { setTag("any"); setTheme("any"); setPerson("any"); setSelected(null); } }, [space, firstSpace]);
+  const emailCfg = useQuery({ queryKey: ["email-cfg"], queryFn: () => getEmailInConfig(), enabled: showEmail });
 
   const goSpace = (id: string | null) => navigate({ to: "/dashboard", search: id ? { space: id } : {} });
 
@@ -211,6 +215,7 @@ function Dashboard() {
         <div className="flex items-center justify-between px-4 py-3 md:px-6">
           <Logo />
           <div className="flex gap-1">
+            <Button asChild variant="ghost" size="sm"><Link to="/journal"><BookOpen className="h-4 w-4" /><span className="hidden sm:inline">Journal</span></Link></Button>
             {!space && <Button variant="ghost" size="sm" onClick={() => setShowEmail(true)}><Mail className="h-4 w-4" /><span className="hidden sm:inline">Email in</span></Button>}
             <Button variant="ghost" size="sm" onClick={signOut}><LogOut className="h-4 w-4" /><span className="hidden sm:inline">Sign out</span></Button>
           </div>
@@ -272,7 +277,7 @@ function Dashboard() {
           </div>
 
           <Tabs value={view} onValueChange={(v) => setView(v as typeof view)} className="mt-5">
-            <TabsList><TabsTrigger value="all">All ideas</TabsTrigger><TabsTrigger value="themes">By theme</TabsTrigger><TabsTrigger value="todos">To-dos</TabsTrigger></TabsList>
+            <TabsList><TabsTrigger value="all">All ideas</TabsTrigger><TabsTrigger value="timeline">Timeline</TabsTrigger><TabsTrigger value="themes">By theme</TabsTrigger><TabsTrigger value="todos">To-dos</TabsTrigger></TabsList>
           </Tabs>
 
           {isLoading || meQ.isLoading ? (
@@ -286,6 +291,8 @@ function Dashboard() {
             <p className="py-20 text-center text-muted-foreground">No ideas match those filters.</p>
           ) : view === "all" ? (
             <Grid ideas={filtered} themesById={themesById} itemsByIdea={itemsByIdea} author={author} onOpen={setSelected} />
+          ) : view === "timeline" ? (
+            <Timeline ideas={filtered} themesById={themesById} author={author} onOpen={setSelected} />
           ) : view === "themes" ? (
             <div className="mt-6 space-y-10">
               {[...data.themes, { id: "", name: "Unsorted", hue: 230 }].map((t) => {
@@ -335,6 +342,8 @@ function Dashboard() {
               canEdit={canEdit(current)}
               isTeam={!!space}
               meId={me?.id ?? ""}
+              teams={space ? [] : me?.teams ?? []}
+              onMoved={(tid) => { setSelected(null); qc.invalidateQueries({ queryKey: boardKey }); qc.invalidateQueries({ queryKey: ["board", tid] }); toast.success("Sent to team space"); }}
               onToggle={toggleItem}
               onReorganize={() => runOrganize(current.id)}
               onChanged={() => qc.invalidateQueries({ queryKey: boardKey })}
@@ -347,11 +356,7 @@ function Dashboard() {
       <Sheet open={showEmail} onOpenChange={setShowEmail}>
         <SheetContent>
           <SheetHeader><SheetTitle className="font-display text-2xl text-primary">Email ideas in</SheetTitle></SheetHeader>
-          <div className="space-y-4 px-4 text-sm">
-            <p>Soon you'll be able to email any thought to your personal address and it'll land in your notebook, organized.</p>
-            <p className="rounded-lg border bg-muted p-3 font-mono">ideas+{me?.token ?? "…"}@your-domain</p>
-            <p className="text-muted-foreground">This turns on once the inbox email service is connected.</p>
-          </div>
+          <EmailPanel token={me?.token ?? null} domain={emailCfg.data?.domain ?? null} connected={!!emailCfg.data?.connected} loading={emailCfg.isLoading} />
         </SheetContent>
       </Sheet>
 
@@ -435,13 +440,30 @@ function Grid({ ideas, themesById, itemsByIdea, author, onOpen }: { ideas: Idea[
 
 type Comment = { id: string; user_id: string; body: string; created_at: string; name: string };
 
-function IdeaDetail({ idea, theme, items, author, canEdit, isTeam, meId, onToggle, onReorganize, onChanged, onDeleted }: {
+function IdeaDetail({ idea, theme, items, author, canEdit, isTeam, meId, teams, onMoved, onToggle, onReorganize, onChanged, onDeleted }: {
   idea: Idea; theme: Theme | undefined; items: Item[]; author: string | null; canEdit: boolean; isTeam: boolean; meId: string;
+  teams: Team[]; onMoved: (teamId: string) => void;
   onToggle: (i: Item) => void; onReorganize: () => void; onChanged: () => void; onDeleted: () => void;
 }) {
   const qc = useQueryClient();
   const [tags, setTags] = useState(idea.tags.join(", "));
   const [comment, setComment] = useState("");
+  const share = useServerFn(setIdeaSharing);
+  const move = useServerFn(moveIdeaToTeam);
+  const [moveTo, setMoveTo] = useState("");
+  const [moving, setMoving] = useState(false);
+  const shareUrl = idea.share_token && typeof window !== "undefined" ? `${window.location.origin}/i/${idea.share_token}` : null;
+  const toggleShare = async (on: boolean) => {
+    try { await share({ data: { id: idea.id, enabled: on } }); onChanged(); toast.success(on ? "Public link created" : "Public link turned off"); }
+    catch (e) { toast.error((e as Error).message); }
+  };
+  const doMove = async () => {
+    if (!moveTo) return;
+    setMoving(true);
+    try { await move({ data: { id: idea.id, teamId: moveTo } }); onMoved(moveTo); }
+    catch (e) { toast.error((e as Error).message); }
+    setMoving(false);
+  };
   const comments = useQuery({
     queryKey: ["comments", idea.id],
     enabled: isTeam,
@@ -513,6 +535,36 @@ function IdeaDetail({ idea, theme, items, author, canEdit, isTeam, meId, onToggl
               <Input value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Add a comment…" maxLength={4000} />
               <Button disabled={!comment.trim()}>Post</Button>
             </form>
+          </div>
+        </div>
+      )}
+      {canEdit && (
+        <div className="rounded-lg border p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="flex items-center gap-1.5 text-sm font-semibold"><Link2 className="h-4 w-4" /> Share publicly</p>
+              <p className="text-xs text-muted-foreground">Anyone with the link can read it — no sign-in.</p>
+            </div>
+            <Switch checked={!!idea.share_token} onCheckedChange={toggleShare} aria-label="Share publicly" />
+          </div>
+          {shareUrl && (
+            <div className="mt-3 flex gap-2">
+              <Input readOnly value={shareUrl} className="font-mono text-xs" />
+              <Button variant="secondary" onClick={async () => { await navigator.clipboard.writeText(shareUrl); toast.success("Link copied"); }}><Copy className="h-4 w-4" /></Button>
+            </div>
+          )}
+        </div>
+      )}
+      {!isTeam && teams.length > 0 && (
+        <div className="rounded-lg border p-4">
+          <p className="flex items-center gap-1.5 text-sm font-semibold"><ArrowRightLeft className="h-4 w-4" /> Send to team space</p>
+          <p className="text-xs text-muted-foreground">Moves it out of your notebook and re-sorts it for the team.</p>
+          <div className="mt-3 flex gap-2">
+            <Select value={moveTo} onValueChange={setMoveTo}>
+              <SelectTrigger><SelectValue placeholder="Choose a team" /></SelectTrigger>
+              <SelectContent>{teams.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent>
+            </Select>
+            <Button disabled={!moveTo || moving} onClick={doMove}>{moving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send"}</Button>
           </div>
         </div>
       )}
@@ -626,5 +678,81 @@ function TeamSettings({ open, onOpenChange, team, members, meId, onChanged, onLe
         </div>
       </SheetContent>
     </Sheet>
+  );
+}
+
+function dayLabel(d: Date) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const that = new Date(d); that.setHours(0, 0, 0, 0);
+  const diff = Math.round((today.getTime() - that.getTime()) / 86400000);
+  if (diff === 0) return "Today";
+  if (diff === 1) return "Yesterday";
+  return d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: today.getFullYear() === d.getFullYear() ? undefined : "numeric" });
+}
+
+function Timeline({ ideas, themesById, author, onOpen }: { ideas: Idea[]; themesById: Map<string, Theme>; author: (uid: string) => string | null; onOpen: (id: string) => void }) {
+  const groups: { label: string; ideas: Idea[] }[] = [];
+  for (const i of ideas) {
+    const label = dayLabel(new Date(i.created_at));
+    const g = groups.at(-1);
+    if (g && g.label === label) g.ideas.push(i); else groups.push({ label, ideas: [i] });
+  }
+  return (
+    <div className="mt-6 space-y-8">
+      {groups.map((g) => (
+        <section key={g.label}>
+          <h3 className="mb-3 font-display text-sm font-bold uppercase tracking-wider text-brand-teal">{g.label}</h3>
+          <ol className="relative ml-2 space-y-4 border-l-2 border-border pl-6">
+            {g.ideas.map((i) => {
+              const t = themesById.get(i.theme_id ?? "");
+              const by = author(i.user_id);
+              return (
+                <li key={i.id} className="relative">
+                  <span style={{ ["--hue" as string]: t?.hue ?? 230 }} className="theme-chip absolute -left-[33px] top-1.5 h-4 w-4 rounded-full border-2 border-card" />
+                  <button onClick={() => onOpen(i.id)} className="w-full rounded-lg border bg-card p-4 text-left shadow-[var(--shadow-card)] transition hover:shadow-[var(--shadow-lift)]">
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      <span className="font-medium">{new Date(i.created_at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</span>
+                      {t && <span style={{ ["--hue" as string]: t.hue }} className="theme-chip rounded-full px-2 py-0.5 font-semibold">{t.name}</span>}
+                      {i.source === "email" && <span>✉</span>}
+                      {by && <span className="ml-auto">{by}</span>}
+                    </div>
+                    <p className="mt-1.5 font-display font-bold text-primary">{i.title ?? i.raw_text.slice(0, 90)}</p>
+                    {i.summary && <p className="mt-0.5 text-sm text-muted-foreground">{i.summary}</p>}
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+function EmailPanel({ token, domain, connected, loading }: { token: string | null; domain: string | null; connected: boolean; loading: boolean }) {
+  const address = token && domain ? `ideas+${token}@${domain}` : null;
+  if (loading) return <div className="px-4"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
+  return (
+    <div className="space-y-4 px-4 text-sm">
+      <p>Email any thought to your personal address and it lands in your notebook, organized — usually within a few seconds.</p>
+      {connected && address ? (
+        <>
+          <div className="flex gap-2">
+            <Input readOnly value={address} className="font-mono text-xs" />
+            <Button variant="secondary" onClick={async () => { await navigator.clipboard.writeText(address); toast.success("Address copied"); }}><Copy className="h-4 w-4" /></Button>
+          </div>
+          <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
+            <li>The subject becomes the first line of the idea.</li>
+            <li>Save this address as a contact so it's one tap away.</li>
+            <li>Keep it private — anything sent here goes into your notebook.</li>
+          </ul>
+        </>
+      ) : (
+        <div className="rounded-lg border bg-muted p-4">
+          <p className="font-semibold">Not connected yet</p>
+          <p className="mt-1 text-muted-foreground">Your address code is <span className="font-mono">{token ?? "…"}</span>. Once the app owner finishes connecting the inbound email service, your full address appears here.</p>
+        </div>
+      )}
+    </div>
   );
 }
