@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, Building2, MessagesSquare, Sparkles, Search, ListChecks, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo, LogoMark } from "@/components/Logo";
+import { Skyline, PowerLine } from "@/components/City";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -28,7 +29,7 @@ const features = [
 
 function Landing() {
   return (
-    <div className="min-h-screen">
+    <div className="relative min-h-screen overflow-hidden">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
         <Logo />
         <Button asChild><Link to="/auth">Sign in</Link></Button>
@@ -38,18 +39,19 @@ function Landing() {
           <div>
             <span className="inline-block rounded-full bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground">Ideas in · shared thinking out · for every team</span>
             <h1 className="mt-6 font-display text-5xl font-extrabold leading-[1.05] tracking-tight text-primary md:text-6xl">
-              Every idea, <span className="text-gradient-brand">on common ground.</span>
+              Every idea, <span className="road-underline text-gradient-brand">on common ground.</span>
             </h1>
             <p className="mt-6 max-w-lg text-lg text-muted-foreground">
               Your department or project team drops in ideas as they come. Common Ground organizes them into one shared board of themes, tags and to-dos everyone can search.
             </p>
             <Button asChild size="lg" className="mt-8"><Link to="/auth">Start your team space <ArrowRight className="h-4 w-4" /></Link></Button>
           </div>
-          <div className="flex justify-center"><LogoMark className="h-56 w-56" /></div>
+          <div className="flex justify-center"><LogoMark className="h-56 w-56 animate-rise" /></div>
         </div>
-        <div className="mt-24 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <PowerLine className="mt-16 h-10" />
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {features.map((f) => (
-            <div key={f.title} className="rounded-xl border bg-card p-6 shadow-[var(--shadow-card)]">
+            <div key={f.title} className="card-tilt animate-rise rounded-xl border bg-card p-6 shadow-[var(--shadow-card)]">
               <f.icon className="h-5 w-5 text-brand-green" />
               <h3 className="mt-4 font-display text-lg font-bold text-primary">{f.title}</h3>
               <p className="mt-1 text-sm text-muted-foreground">{f.body}</p>
@@ -57,6 +59,7 @@ function Landing() {
           ))}
         </div>
       </main>
+      <Skyline className="absolute inset-x-0 bottom-0 h-24" />
     </div>
   );
 }
