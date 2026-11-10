@@ -1,2 +1,4 @@
 - [x] Accounts, storage, quick capture, AI organizing, dashboard
+- [x] Team spaces (departments / city projects), invite links, admin roles, comments
+- [x] Common Ground branding in the Civic Plexus / Relay style
 - [ ] Email-in: blocked on user creating a Postmark inbound account + domain MX record, then setting INBOUND_EMAIL_SECRET
