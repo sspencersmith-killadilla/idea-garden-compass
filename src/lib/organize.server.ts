@@ -61,7 +61,7 @@ export async function organizeIdea(
     .from("ideas")
     .select("id, raw_text, team_id")
     .eq("id", ideaId)
-    .eq("user_id", userId)
+
     .single();
   if (error || !idea) throw new Error("Idea not found");
 
