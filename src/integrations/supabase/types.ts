@@ -14,7 +14,133 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      action_items: {
+        Row: {
+          created_at: string
+          done: boolean
+          id: string
+          idea_id: string
+          text: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          done?: boolean
+          id?: string
+          idea_id: string
+          text: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          done?: boolean
+          id?: string
+          idea_id?: string
+          text?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "action_items_idea_id_fkey"
+            columns: ["idea_id"]
+            isOneToOne: false
+            referencedRelation: "ideas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ideas: {
+        Row: {
+          created_at: string
+          id: string
+          raw_text: string
+          search: unknown
+          source: string
+          status: string
+          summary: string | null
+          tags: string[]
+          theme_id: string | null
+          title: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          raw_text: string
+          search?: unknown
+          source?: string
+          status?: string
+          summary?: string | null
+          tags?: string[]
+          theme_id?: string | null
+          title?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          raw_text?: string
+          search?: unknown
+          source?: string
+          status?: string
+          summary?: string | null
+          tags?: string[]
+          theme_id?: string | null
+          title?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ideas_theme_id_fkey"
+            columns: ["theme_id"]
+            isOneToOne: false
+            referencedRelation: "themes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          id: string
+          inbound_token: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          inbound_token?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          inbound_token?: string
+        }
+        Relationships: []
+      }
+      themes: {
+        Row: {
+          created_at: string
+          hue: number
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          hue?: number
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          hue?: number
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
