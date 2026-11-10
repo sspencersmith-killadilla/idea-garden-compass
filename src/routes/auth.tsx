@@ -1,3 +1,4 @@
+import { Skyline } from "@/components/City";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -65,14 +66,15 @@ function AuthPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
+      <Skyline className="absolute inset-x-0 bottom-0 h-28" />
       <div className="w-full max-w-sm rounded-2xl border bg-card p-8 shadow-[var(--shadow-lift)]">
         <Link to="/"><Logo /></Link>
         {sent ? (
           <p className="mt-6 text-sm">Check <b>{email}</b> for a confirmation link, then come back to sign in.</p>
         ) : (
           <>
-            <h1 className="mt-6 font-display text-xl font-bold text-primary">{mode === "signin" ? "Welcome back" : "Create your account"}</h1>
+            <h1 className="mt-6 font-display text-xl font-bold text-primary">{mode === "signin" ? "Welcome back to town" : "Claim your plot"}</h1>
             <div className="mt-6 space-y-3">
               <button type="button" onClick={() => oauth("google")} className="flex h-10 w-full items-center justify-center gap-2.5 rounded-md border border-[#747775] bg-[#FFFFFF] text-sm font-medium text-[#1F1F1F]">
                 <GoogleG /> Continue with Google

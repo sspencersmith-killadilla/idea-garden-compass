@@ -160,3 +160,41 @@
 
 @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .animate-rise { animation: rise 0.35s ease-out both; }
+
+/* ---- City-builder whimsy ---- */
+@keyframes build-up { from { opacity: 0; transform: translateY(14px) scaleY(0.92); transform-origin: bottom; } to { opacity: 1; transform: none; } }
+@keyframes brick { to { transform: translate(var(--dx), var(--dy)) rotate(var(--r)); opacity: 0; } }
+@keyframes tick-bounce { 40% { transform: scale(1.25); } 100% { transform: scale(1); } }
+@keyframes blink { 50% { opacity: 0.5; } }
+.animate-rise { animation: build-up 0.45s cubic-bezier(.2,.9,.3,1.2) both; }
+.animate-blink { animation: blink 1.4s ease-in-out infinite; }
+.brick-bit { position: fixed; z-index: 100; width: 7px; height: 5px; border-radius: 1px; pointer-events: none; animation: brick 0.75s ease-out forwards; }
+.card-tilt { transition: transform .2s ease, box-shadow .2s ease; }
+.card-tilt:hover { transform: translateY(-3px) rotate(-0.4deg); }
+.todo-check[data-state="checked"] { animation: tick-bounce .3s ease-out; }
+.todo-text { background: linear-gradient(currentColor, currentColor) no-repeat 0 55% / 0 1.5px; transition: background-size .3s ease, color .3s; }
+.todo-text[data-done="true"] { background-size: 100% 1.5px; color: var(--color-muted-foreground); }
+.road-underline { position: relative; display: inline-block; padding-bottom: 8px; }
+.road-underline::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 6px; border-radius: 3px;
+  background: var(--ink);
+  -webkit-mask: none;
+}
+.road-underline::before {
+  content: ""; position: absolute; left: 4px; right: 4px; bottom: 2.5px; height: 1px; z-index: 1;
+  background: repeating-linear-gradient(90deg, var(--brand-green) 0 8px, transparent 8px 14px);
+}
+.tab-road[data-state="active"] { box-shadow: inset 0 -3px 0 var(--brand-teal); }
+.skyline { fill: var(--brand-teal); opacity: 0.12; }
+.road-timeline { position: relative; }
+.road-timeline::before {
+  content: ""; position: absolute; left: -2px; top: 0; bottom: 0; width: 12px; border-radius: 6px; background: var(--ink); opacity: .85;
+}
+.road-timeline::after {
+  content: ""; position: absolute; left: 3.5px; top: 6px; bottom: 6px; width: 1px;
+  background: repeating-linear-gradient(180deg, var(--brand-green) 0 8px, transparent 8px 14px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise, .animate-blink, .todo-check { animation: none !important; }
+  .card-tilt, .card-tilt:hover { transform: none; transition: none; }
+}

@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { ArrowLeft, ArrowDownUp, Loader2, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { CityDoodle, CityLoading, Skyline } from "@/components/City";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,8 +69,8 @@ function Journal() {
         </div>
       </header>
       <main className="mx-auto max-w-3xl px-4 pb-24">
-        <h1 className="mt-8 font-display text-4xl font-extrabold tracking-tight text-primary">Journal</h1>
-        <p className="text-muted-foreground">Everything you've captured, across your notebook and team spaces.</p>
+        <h1 className="road-underline mt-8 font-display text-4xl font-extrabold tracking-tight text-primary">Journal</h1>
+        <p className="text-muted-foreground">Your city's history — every idea you've built, across your notebook and team spaces.</p>
         <div className="mt-6 flex gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -78,9 +79,9 @@ function Journal() {
           <Button variant="outline" onClick={() => setNewest(!newest)}><ArrowDownUp className="h-4 w-4" /> {newest ? "Newest first" : "Oldest first"}</Button>
         </div>
         {isLoading ? (
-          <Loader2 className="mx-auto mt-20 h-6 w-6 animate-spin text-muted-foreground" />
+          <CityLoading />
         ) : !groups.length ? (
-          <p className="mt-20 text-center text-muted-foreground">No entries yet.</p>
+          <div className="relative mt-12 overflow-hidden rounded-xl border border-dashed px-6 pb-14 pt-8 text-center text-muted-foreground"><CityDoodle kind="bulb" className="mx-auto h-20 w-20" /><p className="mt-2">No entries yet — the city archives are waiting.</p><Skyline className="absolute inset-x-0 bottom-0 h-10" /></div>
         ) : (
           groups.map((m) => (
             <section key={m.label} className="mt-10">
@@ -94,7 +95,7 @@ function Journal() {
                       return (
                         <Link key={i.id} to="/dashboard" search={i.team_id ? { space: i.team_id, idea: i.id } : { idea: i.id }}
                           style={{ ["--hue" as string]: theme?.hue ?? 230 }}
-                          className="theme-edge block rounded-lg border bg-card p-5 shadow-[var(--shadow-card)] transition hover:shadow-[var(--shadow-lift)]">
+                          className="theme-edge card-tilt animate-rise block rounded-lg border bg-card p-5 shadow-[var(--shadow-card)] transition hover:shadow-[var(--shadow-lift)]">
                           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                             <span>{new Date(i.created_at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</span>
                             <span className="rounded bg-secondary px-1.5 py-0.5 font-medium text-secondary-foreground">{i.team_id ? data!.teams.get(i.team_id) ?? "Team" : "Notebook"}</span>

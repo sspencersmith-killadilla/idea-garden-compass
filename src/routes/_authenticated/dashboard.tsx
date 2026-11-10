@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Link } from "@tanstack/react-router";
 import { PENDING_INVITE_KEY } from "@/lib/invite";
 import { Logo } from "@/components/Logo";
+import { BuildStageBadge, CityDoodle, CityLoading, Skyline, PowerLine, buildBurst, greeting, useRotatingPrompt } from "@/components/City";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -112,6 +113,9 @@ function Dashboard() {
   const capture = useServerFn(captureIdea);
   const organize = useServerFn(organizeIdeaFn);
   const [text, setText] = useState("");
+  const prompt = useRotatingPrompt();
+  const [hello, setHello] = useState("");
+  useEffect(() => { setHello(greeting(me?.name)); }, [me?.name]);
   const [q, setQ] = useState("");
   const [view, setView] = useState<"all" | "timeline" | "themes" | "todos">("all");
   const [sort, setSort] = useState("newest");
@@ -149,7 +153,7 @@ function Dashboard() {
 
   const add = useMutation({
     mutationFn: (t: string) => capture({ data: { text: t, teamId: space } }),
-    onSuccess: ({ id }) => { setText(""); qc.invalidateQueries({ queryKey: boardKey }); runOrganize(id); },
+    onSuccess: ({ id }) => { const b = document.getElementById("capture-btn")?.getBoundingClientRect(); if (b) buildBurst(b.left + b.width / 2, b.top + b.height / 2); setText(""); qc.invalidateQueries({ queryKey: boardKey }); runOrganize(id); },
     onError: (e) => toast.error((e as Error).message),
   });
 
@@ -239,8 +243,9 @@ function Dashboard() {
 
           <div className="mt-6 flex flex-wrap items-end justify-between gap-3">
             <div>
+              {hello && <p className="mb-1 text-sm text-muted-foreground">{hello}</p>}
               <p className="text-xs font-semibold uppercase tracking-wider text-brand-teal">{team ? KIND_LABEL[team.kind] : "Private"}</p>
-              <h1 className="font-display text-3xl font-extrabold tracking-tight text-primary">{team?.name ?? "My notebook"}</h1>
+              <h1 className="road-underline font-display text-3xl font-extrabold tracking-tight text-primary">{team?.name ?? "My notebook"}</h1>
               <p className="text-sm text-muted-foreground">{team ? `${data?.members.length ?? "…"} members · shared with everyone in this space` : "Only you can see ideas here."}</p>
             </div>
             {team && <Button variant="outline" size="sm" onClick={() => setShowSettings(true)}><Settings className="h-4 w-4" /> {isAdmin ? "Members & invite" : "Members"}</Button>}
@@ -251,12 +256,12 @@ function Dashboard() {
               value={text}
               onChange={(e) => setText(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (text.trim()) add.mutate(text); } }}
-              placeholder={team ? `Share an idea with ${team.name}…` : "What's on your mind? Just dump it here…"}
+              placeholder={team ? `Share an idea with ${team.name}… ${prompt}` : prompt}
               className="min-h-20 resize-none border-0 bg-transparent text-lg shadow-none focus-visible:ring-0"
             />
             <div className="flex items-center justify-between pt-2">
               <span className="text-xs text-muted-foreground">Enter to save · Shift+Enter for a new line</span>
-              <Button disabled={add.isPending || !text.trim()}>{add.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Capture</Button>
+              <Button id="capture-btn" disabled={add.isPending || !text.trim()}>{add.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Capture</Button>
             </div>
           </form>
 
@@ -277,18 +282,20 @@ function Dashboard() {
           </div>
 
           <Tabs value={view} onValueChange={(v) => setView(v as typeof view)} className="mt-5">
-            <TabsList><TabsTrigger value="all">All ideas</TabsTrigger><TabsTrigger value="timeline">Timeline</TabsTrigger><TabsTrigger value="themes">By theme</TabsTrigger><TabsTrigger value="todos">To-dos</TabsTrigger></TabsList>
+            <TabsList><TabsTrigger className="tab-road" value="all">All ideas</TabsTrigger><TabsTrigger className="tab-road" value="timeline">Timeline</TabsTrigger><TabsTrigger className="tab-road" value="themes" title="Your city's districts">By theme</TabsTrigger><TabsTrigger className="tab-road" value="todos">To-dos</TabsTrigger></TabsList>
           </Tabs>
 
           {isLoading || meQ.isLoading ? (
-            <div className="py-20 text-center text-muted-foreground"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></div>
+            <CityLoading />
           ) : !data?.ideas.length ? (
-            <div className="py-20 text-center">
-              <p className="font-display text-2xl font-bold text-primary">Nothing here yet.</p>
-              <p className="mt-2 text-muted-foreground">{team ? "Be the first to share an idea with your team." : "Type your first idea above — however rough."}</p>
+            <div className="relative mt-8 overflow-hidden rounded-xl border border-dashed bg-card/60 px-6 pb-16 pt-10 text-center">
+              <CityDoodle kind="crane" className="mx-auto h-24 w-24" />
+              <p className="mt-2 font-display text-2xl font-bold text-primary">This lot's empty.</p>
+              <p className="mt-2 text-muted-foreground">{team ? "Break ground — be the first to share an idea with your team." : "Zone your first idea above — however rough."}</p>
+              <Skyline className="absolute inset-x-0 bottom-0 h-12" />
             </div>
           ) : !filtered.length ? (
-            <p className="py-20 text-center text-muted-foreground">No ideas match those filters.</p>
+            <div className="py-16 text-center text-muted-foreground"><CityDoodle kind="cone" className="mx-auto h-20 w-20" /><p className="mt-2">Road closed — no ideas match those filters.</p></div>
           ) : view === "all" ? (
             <Grid ideas={filtered} themesById={themesById} itemsByIdea={itemsByIdea} author={author} onOpen={setSelected} />
           ) : view === "timeline" ? (
@@ -305,6 +312,7 @@ function Dashboard() {
                       <span className="text-sm font-normal text-muted-foreground">{list.length}</span>
                     </h2>
                     <Grid ideas={list} themesById={themesById} itemsByIdea={itemsByIdea} author={author} onOpen={setSelected} />
+                    <PowerLine className="mt-2 h-6" />
                   </section>
                 );
               })}
@@ -318,14 +326,14 @@ function Dashboard() {
                   <ul className="mt-2 space-y-1.5">
                     {itemsByIdea.get(i.id)!.map((it) => (
                       <li key={it.id} className="flex items-center gap-2 text-sm">
-                        <Checkbox checked={it.done} onCheckedChange={() => toggleItem(it)} />
-                        <span className={it.done ? "text-muted-foreground line-through" : ""}>{it.text}</span>
+                        <Checkbox className="todo-check" checked={it.done} onCheckedChange={() => toggleItem(it)} />
+                        <span className="todo-text" data-done={it.done}>{it.text}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
               ))}
-              {!filtered.some((i) => itemsByIdea.get(i.id)?.length) && <p className="py-16 text-center text-muted-foreground">No to-dos found yet.</p>}
+              {!filtered.some((i) => itemsByIdea.get(i.id)?.length) && <div className="py-16 text-center text-muted-foreground"><CityDoodle kind="block" className="mx-auto h-20 w-20" /><p className="mt-2">No to-dos yet — nothing under construction.</p></div>}
             </div>
           )}
         </main>
@@ -409,13 +417,14 @@ function Grid({ ideas, themesById, itemsByIdea, author, onOpen }: { ideas: Idea[
             key={i.id}
             onClick={() => onOpen(i.id)}
             style={{ ["--hue" as string]: t?.hue ?? 230 }}
-            className="theme-edge animate-rise mb-4 block w-full break-inside-avoid rounded-lg border bg-card p-5 text-left shadow-[var(--shadow-card)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-lift)]"
+            className="theme-edge animate-rise mb-4 block w-full break-inside-avoid rounded-lg border bg-card p-5 text-left shadow-[var(--shadow-card)] card-tilt hover:shadow-[var(--shadow-lift)]"
           >
             {i.status === "pending" ? (
               <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Organizing…</p>
             ) : (
               <div className="flex items-center justify-between gap-2">
-                {t && <span className="theme-chip rounded-full px-2.5 py-0.5 text-xs font-semibold">{t.name}</span>}
+                {t && <span title="District" className="theme-chip rounded-full px-2.5 py-0.5 text-xs font-semibold">{t.name}</span>}
+                <BuildStageBadge total={items.length} open={open} />
                 <span className="ml-auto text-xs text-muted-foreground">{i.source === "email" && "✉ "}{new Date(i.created_at).toLocaleDateString()}</span>
               </div>
             )}
@@ -506,7 +515,7 @@ function IdeaDetail({ idea, theme, items, author, canEdit, isTeam, meId, teams, 
         <div>
           <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">To-dos</h4>
           <ul className="space-y-2">{items.map((it) => (
-            <li key={it.id} className="flex items-center gap-2 text-sm"><Checkbox checked={it.done} onCheckedChange={() => onToggle(it)} /><span className={it.done ? "text-muted-foreground line-through" : ""}>{it.text}</span></li>
+            <li key={it.id} className="flex items-center gap-2 text-sm"><Checkbox className="todo-check" checked={it.done} onCheckedChange={() => onToggle(it)} /><span className="todo-text" data-done={it.done}>{it.text}</span></li>
           ))}</ul>
         </div>
       )}
@@ -702,14 +711,14 @@ function Timeline({ ideas, themesById, author, onOpen }: { ideas: Idea[]; themes
       {groups.map((g) => (
         <section key={g.label}>
           <h3 className="mb-3 font-display text-sm font-bold uppercase tracking-wider text-brand-teal">{g.label}</h3>
-          <ol className="relative ml-2 space-y-4 border-l-2 border-border pl-6">
+          <ol className="road-timeline ml-2 space-y-4 pl-8">
             {g.ideas.map((i) => {
               const t = themesById.get(i.theme_id ?? "");
               const by = author(i.user_id);
               return (
                 <li key={i.id} className="relative">
-                  <span style={{ ["--hue" as string]: t?.hue ?? 230 }} className="theme-chip absolute -left-[33px] top-1.5 h-4 w-4 rounded-full border-2 border-card" />
-                  <button onClick={() => onOpen(i.id)} className="w-full rounded-lg border bg-card p-4 text-left shadow-[var(--shadow-card)] transition hover:shadow-[var(--shadow-lift)]">
+                  <span style={{ ["--hue" as string]: t?.hue ?? 230 }} className="theme-chip absolute -left-[37px] top-3 h-4 w-4 rounded-full border-2 border-card shadow-[var(--shadow-card)]" />
+                  <button onClick={() => onOpen(i.id)} className="card-tilt animate-rise w-full rounded-lg border bg-card p-4 text-left shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-lift)]">
                     <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                       <span className="font-medium">{new Date(i.created_at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</span>
                       {t && <span style={{ ["--hue" as string]: t.hue }} className="theme-chip rounded-full px-2 py-0.5 font-semibold">{t.name}</span>}
