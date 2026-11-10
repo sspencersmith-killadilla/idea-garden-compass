@@ -26,3 +26,17 @@ export const getPublicIdea = createServerFn({ method: "GET" })
     const { data: idea } = await db.rpc("get_public_idea", { _token: data.token });
     return (idea as unknown as PublicIdea | null) ?? null;
   });
+
+export type PublicFile = { name: string; mime: string; size: number; url: string | null; path: string };
+
+export const getPublicIdeaFiles = createServerFn({ method: "GET" })
+  .inputValidator((d: { token: string }) => z.object({ token: z.string().regex(/^[a-f0-9]{16,64}$/) }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows } = await supabaseAdmin.rpc("get_public_idea_files", { _token: data.token });
+    const files = (rows ?? []) as { path: string; name: string; mime: string; size: number }[];
+    if (!files.length) return [] as PublicFile[];
+    const { data: signed } = await supabaseAdmin.storage.from("idea-files").createSignedUrls(files.map((f) => f.path), 3600);
+    const m = new Map((signed ?? []).map((x) => [x.path, x.signedUrl]));
+    return files.map((f) => ({ ...f, size: Number(f.size), url: m.get(f.path) ?? null })) as PublicFile[];
+  });
