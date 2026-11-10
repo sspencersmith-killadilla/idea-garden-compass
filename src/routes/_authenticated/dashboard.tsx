@@ -127,7 +127,7 @@ function Dashboard() {
     if (!code) return;
     sessionStorage.removeItem(PENDING_INVITE_KEY);
     supabase.rpc("join_team", { _code: code }).then(({ data: tid, error }) => {
-      if (error || !tid) return toast.error("That invite link isn't valid anymore.");
+      if (error || !tid) { toast.error("That invite link isn't valid anymore."); return; }
       qc.invalidateQueries({ queryKey: ["me"] });
       navigate({ to: "/dashboard", search: { space: tid } });
       toast.success("You joined the team");
@@ -456,19 +456,19 @@ function IdeaDetail({ idea, theme, items, author, canEdit, isTeam, meId, onToggl
   const saveTags = async () => {
     const next = [...new Set(tags.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean))];
     const { error } = await supabase.from("ideas").update({ tags: next }).eq("id", idea.id);
-    if (error) return toast.error("Couldn't save tags");
+    if (error) { toast.error("Couldn't save tags"); return; }
     onChanged(); toast.success("Tags saved");
   };
   const del = async () => {
     const { error } = await supabase.from("ideas").delete().eq("id", idea.id);
-    if (error) return toast.error("Couldn't delete");
+    if (error) { toast.error("Couldn't delete"); return; }
     onDeleted(); toast.success("Idea deleted");
   };
   const postComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!comment.trim()) return;
     const { error } = await supabase.from("idea_comments").insert({ idea_id: idea.id, user_id: meId, body: comment.trim() });
-    if (error) return toast.error("Couldn't post comment");
+    if (error) { toast.error("Couldn't post comment"); return; }
     setComment("");
     qc.invalidateQueries({ queryKey: ["comments", idea.id] });
   };
@@ -535,7 +535,7 @@ function NewTeamDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpe
     setBusy(true);
     const { data, error } = await supabase.rpc("create_team", { _name: name, _kind: kind });
     setBusy(false);
-    if (error || !data) return toast.error("Couldn't create the space");
+    if (error || !data) { toast.error("Couldn't create the space"); return; }
     setName(""); onOpenChange(false); onCreated(data);
     toast.success("Space created — invite your team from Members & invite");
   };
@@ -570,17 +570,17 @@ function TeamSettings({ open, onOpenChange, team, members, meId, onChanged, onLe
   const resetLink = async () => {
     const code = Array.from(crypto.getRandomValues(new Uint8Array(6))).map((b) => b.toString(16).padStart(2, "0")).join("");
     const { error } = await supabase.from("teams").update({ invite_code: code }).eq("id", team.id);
-    if (error) return toast.error("Couldn't reset link");
+    if (error) { toast.error("Couldn't reset link"); return; }
     onChanged(); toast.success("Old link no longer works");
   };
   const setRole = async (uid: string, role: string) => {
     const { error } = await supabase.from("team_members").update({ role }).eq("team_id", team.id).eq("user_id", uid);
-    if (error) return toast.error("Couldn't change role");
+    if (error) { toast.error("Couldn't change role"); return; }
     onChanged();
   };
   const remove = async (uid: string) => {
     const { error } = await supabase.from("team_members").delete().eq("team_id", team.id).eq("user_id", uid);
-    if (error) return toast.error("Couldn't remove");
+    if (error) { toast.error("Couldn't remove"); return; }
     if (uid === meId) onLeft(); else onChanged();
   };
   return (
