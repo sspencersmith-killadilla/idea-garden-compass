@@ -87,6 +87,7 @@ export type Database = {
           id: string
           raw_text: string
           search: unknown
+          share_token: string | null
           source: string
           status: string
           summary: string | null
@@ -101,6 +102,7 @@ export type Database = {
           id?: string
           raw_text: string
           search?: unknown
+          share_token?: string | null
           source?: string
           status?: string
           summary?: string | null
@@ -115,6 +117,7 @@ export type Database = {
           id?: string
           raw_text?: string
           search?: unknown
+          share_token?: string | null
           source?: string
           status?: string
           summary?: string | null
@@ -261,6 +264,7 @@ export type Database = {
       can_edit_idea: { Args: { _idea: string }; Returns: boolean }
       can_view_idea: { Args: { _idea: string }; Returns: boolean }
       create_team: { Args: { _kind?: string; _name: string }; Returns: string }
+      get_public_idea: { Args: { _token: string }; Returns: Json }
       is_team_admin: { Args: { _team: string }; Returns: boolean }
       is_team_member: { Args: { _team: string }; Returns: boolean }
       join_team: { Args: { _code: string }; Returns: string }
