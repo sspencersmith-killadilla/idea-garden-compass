@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/Logo";
 
-export const PENDING_INVITE_KEY = "cg-pending-invite";
+import { PENDING_INVITE_KEY } from "@/lib/invite";
 
 export const Route = createFileRoute("/join/$code")({
   ssr: false,
