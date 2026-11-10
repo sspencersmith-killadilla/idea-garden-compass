@@ -1,0 +1,2 @@
+- [x] Accounts, storage, quick capture, AI organizing, dashboard
+- [ ] Email-in: blocked on user creating a Postmark inbound account + domain MX record, then setting INBOUND_EMAIL_SECRET

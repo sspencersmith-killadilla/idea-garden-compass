@@ -28,3 +28,7 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+## Project rules
+- AI idea organizing lives in `src/lib/organize.server.ts` and is shared by the web capture server function and the inbound-email route, so both sources produce identical cards.
+- Dashboard reads data client-side with the browser client under `_authenticated` (ssr: false); RLS scopes everything to the owner.
