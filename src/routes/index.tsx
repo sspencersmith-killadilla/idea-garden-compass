@@ -39,7 +39,7 @@ function Landing() {
           <div>
             <span className="inline-block rounded-full bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground">Ideas in · shared thinking out · for every team</span>
             <h1 className="mt-6 font-display text-5xl font-extrabold leading-[1.05] tracking-tight text-primary md:text-6xl">
-              Every idea, <span className="road-underline text-gradient-brand">on common ground.</span>
+              Every idea, <span className="text-gradient-brand">on common ground.</span>
             </h1>
             <p className="mt-6 max-w-lg text-lg text-muted-foreground">
               Your department or project team drops in ideas as they come. Common Ground organizes them into one shared board of themes, tags and to-dos everyone can search.
