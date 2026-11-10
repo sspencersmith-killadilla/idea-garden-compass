@@ -1,7 +1,7 @@
 import { FileText, Trash2, Download } from "lucide-react";
 import { isImage, prettySize, type IdeaFile } from "@/lib/files";
 
-export function FileGallery({ files, onDelete }: { files: IdeaFile[]; onDelete?: (f: IdeaFile) => void }) {
+export function FileGallery({ files, onDelete }: { files: IdeaFile[]; onDelete?: ((f: IdeaFile) => void) | undefined }) {
   if (!files.length) return null;
   const imgs = files.filter((f) => isImage(f.mime));
   const docs = files.filter((f) => !isImage(f.mime));
