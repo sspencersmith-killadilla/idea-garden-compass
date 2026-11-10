@@ -81,6 +81,47 @@ export type Database = {
           },
         ]
       }
+      idea_files: {
+        Row: {
+          created_at: string
+          id: string
+          idea_id: string
+          mime: string
+          name: string
+          path: string
+          size: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          idea_id: string
+          mime?: string
+          name: string
+          path: string
+          size?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          idea_id?: string
+          mime?: string
+          name?: string
+          path?: string
+          size?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "idea_files_idea_id_fkey"
+            columns: ["idea_id"]
+            isOneToOne: false
+            referencedRelation: "ideas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ideas: {
         Row: {
           created_at: string
@@ -265,9 +306,19 @@ export type Database = {
       can_view_idea: { Args: { _idea: string }; Returns: boolean }
       create_team: { Args: { _kind?: string; _name: string }; Returns: string }
       get_public_idea: { Args: { _token: string }; Returns: Json }
+      get_public_idea_files: {
+        Args: { _token: string }
+        Returns: {
+          mime: string
+          name: string
+          path: string
+          size: number
+        }[]
+      }
       is_team_admin: { Args: { _team: string }; Returns: boolean }
       is_team_member: { Args: { _team: string }; Returns: boolean }
       join_team: { Args: { _code: string }; Returns: string }
+      path_idea: { Args: { _name: string }; Returns: string }
       shares_team: { Args: { _other: string }; Returns: boolean }
     }
     Enums: {
