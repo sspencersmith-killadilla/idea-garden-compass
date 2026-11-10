@@ -1,3 +1,4 @@
+import { Skyline } from "@/components/City";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { CheckCircle2, Circle } from "lucide-react";
 import { getPublicIdea } from "@/lib/public.functions";
@@ -34,7 +35,7 @@ export const Route = createFileRoute("/i/$token")({
 function PublicIdeaPage() {
   const idea = Route.useLoaderData();
   return (
-    <div className="min-h-screen">
+    <div className="relative min-h-screen overflow-hidden">
       <header className="mx-auto flex max-w-3xl items-center justify-between px-6 py-5">
         <Logo />
         <Button asChild variant="outline" size="sm"><Link to="/">What is this?</Link></Button>
@@ -45,7 +46,7 @@ function PublicIdeaPage() {
             {idea.theme_name && <span className="theme-chip rounded-full px-2.5 py-0.5 font-semibold">{idea.theme_name}</span>}
             {new Date(idea.created_at).toLocaleDateString(undefined, { dateStyle: "long" })}
           </div>
-          <h1 className="mt-4 font-display text-3xl font-extrabold tracking-tight text-primary">{idea.title ?? "Shared idea"}</h1>
+          <h1 className="road-underline mt-4 font-display text-3xl font-extrabold tracking-tight text-primary">{idea.title ?? "Shared idea"}</h1>
           {idea.summary && <p className="mt-3 text-lg text-muted-foreground">{idea.summary}</p>}
           {idea.items.length > 0 && (
             <ul className="mt-6 space-y-2">
@@ -61,6 +62,7 @@ function PublicIdeaPage() {
           <div className="mt-5 flex flex-wrap gap-1.5">{idea.tags.map((t) => <span key={t} className="tag-chip rounded px-2 py-0.5 text-xs">#{t}</span>)}</div>
         </article>
       </main>
+      <Skyline className="absolute inset-x-0 bottom-0 h-20" />
     </div>
   );
 }
