@@ -7,14 +7,15 @@ import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Logo } from "@/components/Logo";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Sign in — Idea Inbox" },
-      { name: "description", content: "Sign in or create your Idea Inbox account." },
-      { property: "og:title", content: "Sign in — Idea Inbox" },
-      { property: "og:description", content: "Sign in or create your Idea Inbox account." },
+      { title: "Sign in — Common Ground" },
+      { name: "description", content: "Sign in or create your Common Ground account." },
+      { property: "og:title", content: "Sign in — Common Ground" },
+      { property: "og:description", content: "Sign in or create your Common Ground account." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -64,14 +65,14 @@ function AuthPage() {
   }
 
   return (
-    <div className="paper-lines flex min-h-screen items-center justify-center px-4">
+    <div className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm rounded-2xl border bg-card p-8 shadow-[var(--shadow-lift)]">
-        <Link to="/" className="font-display text-2xl font-extrabold">Idea Inbox<span className="text-primary">.</span></Link>
+        <Link to="/"><Logo /></Link>
         {sent ? (
           <p className="mt-6 text-sm">Check <b>{email}</b> for a confirmation link, then come back to sign in.</p>
         ) : (
           <>
-            <h1 className="mt-6 font-display text-xl font-semibold">{mode === "signin" ? "Welcome back" : "Create your inbox"}</h1>
+            <h1 className="mt-6 font-display text-xl font-bold text-primary">{mode === "signin" ? "Welcome back" : "Create your account"}</h1>
             <div className="mt-6 space-y-3">
               <button type="button" onClick={() => oauth("google")} className="flex h-10 w-full items-center justify-center gap-2.5 rounded-md border border-[#747775] bg-[#FFFFFF] text-sm font-medium text-[#1F1F1F]">
                 <GoogleG /> Continue with Google

@@ -59,15 +59,18 @@ export async function organizeIdea(
 ) {
   const { data: idea, error } = await db
     .from("ideas")
-    .select("id, raw_text")
+    .select("id, raw_text, team_id")
     .eq("id", ideaId)
-    .eq("user_id", userId)
+
     .single();
   if (error || !idea) throw new Error("Idea not found");
 
+  const teamId = idea.team_id;
+  const themeQ = db.from("themes").select("id, name");
+  const tagQ = db.from("ideas").select("tags").limit(500);
   const [{ data: themes }, { data: tagRows }] = await Promise.all([
-    db.from("themes").select("id, name").eq("user_id", userId),
-    db.from("ideas").select("tags").eq("user_id", userId).limit(500),
+    teamId ? themeQ.eq("team_id", teamId) : themeQ.is("team_id", null).eq("user_id", userId),
+    teamId ? tagQ.eq("team_id", teamId) : tagQ.is("team_id", null).eq("user_id", userId),
   ]);
   const tagSet = new Set<string>();
   tagRows?.forEach((r) => r.tags.forEach((t) => tagSet.add(t)));
@@ -86,7 +89,7 @@ export async function organizeIdea(
   if (!theme) {
     const { data: created } = await db
       .from("themes")
-      .insert({ user_id: userId, name: themeName, hue: HUES[(themes?.length ?? 0) % HUES.length] ?? 30 })
+      .insert({ user_id: userId, team_id: teamId, name: themeName, hue: HUES[(themes?.length ?? 0) % HUES.length] ?? 30 })
       .select("id, name")
       .single();
     theme = created ?? undefined;

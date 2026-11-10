@@ -49,6 +49,38 @@ export type Database = {
           },
         ]
       }
+      idea_comments: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          idea_id: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          idea_id: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          idea_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "idea_comments_idea_id_fkey"
+            columns: ["idea_id"]
+            isOneToOne: false
+            referencedRelation: "ideas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ideas: {
         Row: {
           created_at: string
@@ -59,6 +91,7 @@ export type Database = {
           status: string
           summary: string | null
           tags: string[]
+          team_id: string | null
           theme_id: string | null
           title: string | null
           user_id: string
@@ -72,6 +105,7 @@ export type Database = {
           status?: string
           summary?: string | null
           tags?: string[]
+          team_id?: string | null
           theme_id?: string | null
           title?: string | null
           user_id: string
@@ -85,11 +119,19 @@ export type Database = {
           status?: string
           summary?: string | null
           tags?: string[]
+          team_id?: string | null
           theme_id?: string | null
           title?: string | null
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "ideas_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ideas_theme_id_fkey"
             columns: ["theme_id"]
@@ -102,18 +144,77 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
+          display_name: string | null
           id: string
           inbound_token: string
         }
         Insert: {
           created_at?: string
+          display_name?: string | null
           id: string
           inbound_token?: string
         }
         Update: {
           created_at?: string
+          display_name?: string | null
           id?: string
           inbound_token?: string
+        }
+        Relationships: []
+      }
+      team_members: {
+        Row: {
+          created_at: string
+          role: string
+          team_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          role?: string
+          team_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          role?: string
+          team_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teams: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          invite_code: string
+          kind: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          invite_code?: string
+          kind?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          invite_code?: string
+          kind?: string
+          name?: string
         }
         Relationships: []
       }
@@ -123,6 +224,7 @@ export type Database = {
           hue: number
           id: string
           name: string
+          team_id: string | null
           user_id: string
         }
         Insert: {
@@ -130,6 +232,7 @@ export type Database = {
           hue?: number
           id?: string
           name: string
+          team_id?: string | null
           user_id: string
         }
         Update: {
@@ -137,16 +240,31 @@ export type Database = {
           hue?: number
           id?: string
           name?: string
+          team_id?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "themes_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      can_edit_idea: { Args: { _idea: string }; Returns: boolean }
+      can_view_idea: { Args: { _idea: string }; Returns: boolean }
+      create_team: { Args: { _kind?: string; _name: string }; Returns: string }
+      is_team_admin: { Args: { _team: string }; Returns: boolean }
+      is_team_member: { Args: { _team: string }; Returns: boolean }
+      join_team: { Args: { _code: string }; Returns: string }
+      shares_team: { Args: { _other: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
