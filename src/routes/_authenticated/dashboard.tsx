@@ -284,7 +284,7 @@ function Dashboard() {
             onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
             onDragLeave={() => setDragging(false)}
             onDrop={(e) => { e.preventDefault(); setDragging(false); addPending(e.dataTransfer.files); }}
-            className={`mt-5 rounded-xl border bg-card p-4 ${dragging ? "ring-2 ring-ring" : ""} shadow-[var(--shadow-card)] md:p-5" onSubmit={(e) => { e.preventDefault(); if (text.trim() || pending.length) add.mutate(text); }}>
+            className={`mt-5 rounded-xl border bg-card p-4 ${dragging ? "ring-2 ring-ring" : ""} shadow-[var(--shadow-card)] md:p-5`} onSubmit={(e) => { e.preventDefault(); if (text.trim() || pending.length) add.mutate(text); }}>
             <Textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
