@@ -1,7 +1,8 @@
 import { Skyline } from "@/components/City";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { CheckCircle2, Circle } from "lucide-react";
-import { getPublicIdea } from "@/lib/public.functions";
+import { FileGallery } from "@/components/IdeaFiles";
+import { getPublicIdea, getPublicIdeaFiles } from "@/lib/public.functions";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 
@@ -9,7 +10,8 @@ export const Route = createFileRoute("/i/$token")({
   loader: async ({ params }) => {
     const idea = await getPublicIdea({ data: { token: params.token } }).catch(() => null);
     if (!idea) throw notFound();
-    return idea;
+    const files = await getPublicIdeaFiles({ data: { token: params.token } }).catch(() => []);
+    return { ...idea, files };
   },
   head: ({ loaderData }) => ({
     meta: [
@@ -59,6 +61,7 @@ function PublicIdeaPage() {
             </ul>
           )}
           <p className="mt-6 whitespace-pre-wrap rounded-lg bg-muted p-5 leading-relaxed">{idea.raw_text}</p>
+          {idea.files.length > 0 && <div className="mt-6"><FileGallery files={idea.files} /></div>}
           <div className="mt-5 flex flex-wrap gap-1.5">{idea.tags.map((t) => <span key={t} className="tag-chip rounded px-2 py-0.5 text-xs">#{t}</span>)}</div>
         </article>
       </main>

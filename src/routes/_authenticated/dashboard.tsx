@@ -4,13 +4,15 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Search, LogOut, Mail, BookOpen, Link2, ArrowRightLeft, Loader2, Trash2, RotateCw, Send, Plus, Lock, Users, Settings, Copy, MessageSquare } from "lucide-react";
+import { Search, LogOut, Mail, BookOpen, Link2, ArrowRightLeft, Loader2, Trash2, RotateCw, Send, Plus, Lock, Users, Settings, Copy, MessageSquare, Paperclip, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { captureIdea, organizeIdeaFn, setIdeaSharing, moveIdeaToTeam, getEmailInConfig } from "@/lib/ideas.functions";
 import { Switch } from "@/components/ui/switch";
 import { Link } from "@tanstack/react-router";
 import { PENDING_INVITE_KEY } from "@/lib/invite";
 import { Logo } from "@/components/Logo";
+import { FileGallery } from "@/components/IdeaFiles";
+import { uploadIdeaFiles, deleteIdeaFile, withSignedUrls, isImage, MAX_FILE_BYTES, type IdeaFile } from "@/lib/files";
 import { BuildStageBadge, CityDoodle, CityLoading, Skyline, PowerLine, buildBurst, greeting, useRotatingPrompt } from "@/components/City";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -82,7 +84,13 @@ function useBoard(space: string | null, me: string | undefined) {
       ]);
       if (ideas.error) throw ideas.error;
       const ids = (ideas.data ?? []).map((i) => i.id);
-      const items = ids.length ? await supabase.from("action_items").select("id, idea_id, text, done").in("idea_id", ids).order("created_at") : { data: [] };
+      const [items, fileRows] = ids.length
+        ? await Promise.all([
+            supabase.from("action_items").select("id, idea_id, text, done").in("idea_id", ids).order("created_at"),
+            supabase.from("idea_files").select("id, idea_id, path, name, mime, size").in("idea_id", ids).order("created_at"),
+          ])
+        : [{ data: [] }, { data: [] }];
+      const files = await withSignedUrls((fileRows.data ?? []) as IdeaFile[]);
       const memberRows = members.data ?? [];
       const { data: profs } = memberRows.length
         ? await supabase.from("profiles").select("id, display_name").in("id", memberRows.map((m) => m.user_id))
@@ -92,6 +100,7 @@ function useBoard(space: string | null, me: string | undefined) {
         ideas: (ideas.data ?? []) as Idea[],
         themes: (themes.data ?? []) as Theme[],
         items: (items.data ?? []) as Item[],
+        files,
         members: memberRows.map((m) => ({ user_id: m.user_id, role: m.role, name: nameOf.get(m.user_id) ?? "Someone" })) as Member[],
       };
     },
@@ -113,6 +122,14 @@ function Dashboard() {
   const capture = useServerFn(captureIdea);
   const organize = useServerFn(organizeIdeaFn);
   const [text, setText] = useState("");
+  const [pending, setPending] = useState<File[]>([]);
+  const [dragging, setDragging] = useState(false);
+  const addPending = (list: FileList | File[] | null) => {
+    const arr = Array.from(list ?? []);
+    const big = arr.filter((f) => f.size > MAX_FILE_BYTES);
+    if (big.length) toast.error(`Too big (20 MB max): ${big.map((f) => f.name).join(", ")}`);
+    setPending((p) => [...p, ...arr.filter((f) => f.size <= MAX_FILE_BYTES)].slice(0, 10));
+  };
   const prompt = useRotatingPrompt();
   const [hello, setHello] = useState("");
   useEffect(() => { setHello(greeting(me?.name)); }, [me?.name]);
@@ -152,13 +169,25 @@ function Dashboard() {
   };
 
   const add = useMutation({
-    mutationFn: (t: string) => capture({ data: { text: t, teamId: space } }),
-    onSuccess: ({ id }) => { const b = document.getElementById("capture-btn")?.getBoundingClientRect(); if (b) buildBurst(b.left + b.width / 2, b.top + b.height / 2); setText(""); qc.invalidateQueries({ queryKey: boardKey }); runOrganize(id); },
+    mutationFn: async (t: string) => {
+      const res = await capture({ data: { text: t.trim() || pending.map((f) => f.name).join(", "), teamId: space } });
+      if (pending.length && me) {
+        const failed = await uploadIdeaFiles(res.id, me.id, pending);
+        if (failed.length) toast.error(`Couldn't attach: ${failed.join(", ")}`);
+      }
+      return res;
+    },
+    onSuccess: ({ id }) => { setPending([]); const b = document.getElementById("capture-btn")?.getBoundingClientRect(); if (b) buildBurst(b.left + b.width / 2, b.top + b.height / 2); setText(""); qc.invalidateQueries({ queryKey: boardKey }); runOrganize(id); },
     onError: (e) => toast.error((e as Error).message),
   });
 
   const themesById = useMemo(() => new Map((data?.themes ?? []).map((t) => [t.id, t])), [data]);
   const nameById = useMemo(() => new Map((data?.members ?? []).map((m) => [m.user_id, m.name])), [data]);
+  const filesByIdea = useMemo(() => {
+    const m = new Map<string, IdeaFile[]>();
+    data?.files.forEach((f) => m.set(f.idea_id!, [...(m.get(f.idea_id!) ?? []), f]));
+    return m;
+  }, [data]);
   const itemsByIdea = useMemo(() => {
     const m = new Map<string, Item[]>();
     data?.items.forEach((i) => m.set(i.idea_id, [...(m.get(i.idea_id) ?? []), i]));
@@ -251,17 +280,38 @@ function Dashboard() {
             {team && <Button variant="outline" size="sm" onClick={() => setShowSettings(true)}><Settings className="h-4 w-4" /> {isAdmin ? "Members & invite" : "Members"}</Button>}
           </div>
 
-          <form className="mt-5 rounded-xl border bg-card p-4 shadow-[var(--shadow-card)] md:p-5" onSubmit={(e) => { e.preventDefault(); if (text.trim()) add.mutate(text); }}>
+          <form
+            onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={(e) => { e.preventDefault(); setDragging(false); addPending(e.dataTransfer.files); }}
+            className={`mt-5 rounded-xl border bg-card p-4 ${dragging ? "ring-2 ring-ring" : ""} shadow-[var(--shadow-card)] md:p-5" onSubmit={(e) => { e.preventDefault(); if (text.trim() || pending.length) add.mutate(text); }}>
             <Textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (text.trim()) add.mutate(text); } }}
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (text.trim() || pending.length) add.mutate(text); } }}
+              onPaste={(e) => { const fs = Array.from(e.clipboardData.files); if (fs.length) { e.preventDefault(); addPending(fs); } }}
               placeholder={team ? `Share an idea with ${team.name}… ${prompt}` : prompt}
               className="min-h-20 resize-none border-0 bg-transparent text-lg shadow-none focus-visible:ring-0"
             />
-            <div className="flex items-center justify-between pt-2">
-              <span className="text-xs text-muted-foreground">Enter to save · Shift+Enter for a new line</span>
-              <Button id="capture-btn" disabled={add.isPending || !text.trim()}>{add.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Capture</Button>
+            {pending.length > 0 && (
+              <div className="flex flex-wrap gap-2 pt-2">
+                {pending.map((f, n) => (
+                  <span key={n} className="flex items-center gap-1.5 rounded-md border bg-muted px-2 py-1 text-xs">
+                    {isImage(f.type) ? "🖼" : "📄"} <span className="max-w-40 truncate">{f.name}</span>
+                    <button type="button" aria-label={`Remove ${f.name}`} onClick={() => setPending((p) => p.filter((_, i) => i !== n))}><X className="h-3 w-3" /></button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className="flex items-center justify-between gap-2 pt-2">
+              <div className="flex items-center gap-2">
+                <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-muted hover:text-primary">
+                  <Paperclip className="h-4 w-4" /> Attach
+                  <input type="file" multiple className="sr-only" onChange={(e) => { addPending(e.target.files); e.target.value = ""; }} />
+                </label>
+                <span className="hidden text-xs text-muted-foreground sm:inline">Enter to save · drop or paste files</span>
+              </div>
+              <Button id="capture-btn" disabled={add.isPending || (!text.trim() && !pending.length)}>{add.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Capture</Button>
             </div>
           </form>
 
@@ -297,7 +347,7 @@ function Dashboard() {
           ) : !filtered.length ? (
             <div className="py-16 text-center text-muted-foreground"><CityDoodle kind="cone" className="mx-auto h-20 w-20" /><p className="mt-2">Road closed — no ideas match those filters.</p></div>
           ) : view === "all" ? (
-            <Grid ideas={filtered} themesById={themesById} itemsByIdea={itemsByIdea} author={author} onOpen={setSelected} />
+            <Grid ideas={filtered} themesById={themesById} itemsByIdea={itemsByIdea} filesByIdea={filesByIdea} author={author} onOpen={setSelected} />
           ) : view === "timeline" ? (
             <Timeline ideas={filtered} themesById={themesById} author={author} onOpen={setSelected} />
           ) : view === "themes" ? (
@@ -311,7 +361,7 @@ function Dashboard() {
                       <span style={{ ["--hue" as string]: t.hue }} className="theme-chip h-3 w-3 rounded-full" />{t.name}
                       <span className="text-sm font-normal text-muted-foreground">{list.length}</span>
                     </h2>
-                    <Grid ideas={list} themesById={themesById} itemsByIdea={itemsByIdea} author={author} onOpen={setSelected} />
+                    <Grid ideas={list} themesById={themesById} itemsByIdea={itemsByIdea} filesByIdea={filesByIdea} author={author} onOpen={setSelected} />
                     <PowerLine className="mt-2 h-6" />
                   </section>
                 );
@@ -346,6 +396,7 @@ function Dashboard() {
               idea={current}
               theme={themesById.get(current.theme_id ?? "")}
               items={itemsByIdea.get(current.id) ?? []}
+              files={filesByIdea.get(current.id) ?? []}
               author={author(current.user_id)}
               canEdit={canEdit(current)}
               isTeam={!!space}
@@ -404,7 +455,7 @@ function Filter({ value, onChange, options }: { value: string; onChange: (v: str
   );
 }
 
-function Grid({ ideas, themesById, itemsByIdea, author, onOpen }: { ideas: Idea[]; themesById: Map<string, Theme>; itemsByIdea: Map<string, Item[]>; author: (uid: string) => string | null; onOpen: (id: string) => void }) {
+function Grid({ ideas, themesById, itemsByIdea, filesByIdea, author, onOpen }: { ideas: Idea[]; themesById: Map<string, Theme>; itemsByIdea: Map<string, Item[]>; filesByIdea: Map<string, IdeaFile[]>; author: (uid: string) => string | null; onOpen: (id: string) => void }) {
   return (
     <div className="mt-5 columns-1 gap-4 sm:columns-2 2xl:columns-3">
       {ideas.map((i) => {
@@ -412,6 +463,8 @@ function Grid({ ideas, themesById, itemsByIdea, author, onOpen }: { ideas: Idea[
         const items = itemsByIdea.get(i.id) ?? [];
         const open = items.filter((x) => !x.done).length;
         const by = author(i.user_id);
+        const fs = filesByIdea.get(i.id) ?? [];
+        const cover = fs.find((f) => isImage(f.mime) && f.url);
         return (
           <button
             key={i.id}
@@ -419,6 +472,7 @@ function Grid({ ideas, themesById, itemsByIdea, author, onOpen }: { ideas: Idea[
             style={{ ["--hue" as string]: t?.hue ?? 230 }}
             className="theme-edge animate-rise mb-4 block w-full break-inside-avoid rounded-lg border bg-card p-5 text-left shadow-[var(--shadow-card)] card-tilt hover:shadow-[var(--shadow-lift)]"
           >
+            {cover && <img src={cover.url!} alt="" loading="lazy" className="-mx-5 -mt-5 mb-4 aspect-[16/9] w-[calc(100%+2.5rem)] max-w-none rounded-t-lg object-cover" />}
             {i.status === "pending" ? (
               <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Organizing…</p>
             ) : (
@@ -434,6 +488,7 @@ function Grid({ ideas, themesById, itemsByIdea, author, onOpen }: { ideas: Idea[
             <div className="mt-3 flex flex-wrap gap-1.5">
               {i.tags.map((tg) => <span key={tg} className="tag-chip rounded px-2 py-0.5 text-xs">#{tg}</span>)}
             </div>
+            {fs.length > 0 && <p className="mt-3 flex items-center gap-1 text-xs text-muted-foreground"><Paperclip className="h-3 w-3" /> {fs.length} {fs.length === 1 ? "file" : "files"}</p>}
             {(items.length > 0 || by) && (
               <div className="mt-3 flex items-center justify-between text-xs">
                 {items.length > 0 ? <span className="font-medium text-brand-teal">{open} of {items.length} to-dos open</span> : <span />}
@@ -449,8 +504,8 @@ function Grid({ ideas, themesById, itemsByIdea, author, onOpen }: { ideas: Idea[
 
 type Comment = { id: string; user_id: string; body: string; created_at: string; name: string };
 
-function IdeaDetail({ idea, theme, items, author, canEdit, isTeam, meId, teams, onMoved, onToggle, onReorganize, onChanged, onDeleted }: {
-  idea: Idea; theme: Theme | undefined; items: Item[]; author: string | null; canEdit: boolean; isTeam: boolean; meId: string;
+function IdeaDetail({ idea, theme, items, files, author, canEdit, isTeam, meId, teams, onMoved, onToggle, onReorganize, onChanged, onDeleted }: {
+  idea: Idea; theme: Theme | undefined; items: Item[]; files: IdeaFile[]; author: string | null; canEdit: boolean; isTeam: boolean; meId: string;
   teams: Team[]; onMoved: (teamId: string) => void;
   onToggle: (i: Item) => void; onReorganize: () => void; onChanged: () => void; onDeleted: () => void;
 }) {
@@ -461,6 +516,17 @@ function IdeaDetail({ idea, theme, items, author, canEdit, isTeam, meId, teams, 
   const move = useServerFn(moveIdeaToTeam);
   const [moveTo, setMoveTo] = useState("");
   const [moving, setMoving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const addFiles = async (list: FileList | null) => {
+    const arr = Array.from(list ?? []);
+    if (!arr.length) return;
+    setUploading(true);
+    const failed = await uploadIdeaFiles(idea.id, meId, arr);
+    setUploading(false);
+    if (failed.length) toast.error(`Couldn't attach: ${failed.join(", ")}`); else toast.success(arr.length === 1 ? "File attached" : "Files attached");
+    onChanged();
+  };
+  const removeFile = async (f: IdeaFile) => { await deleteIdeaFile(f); onChanged(); toast.success("File removed"); };
   const shareUrl = idea.share_token && typeof window !== "undefined" ? `${window.location.origin}/i/${idea.share_token}` : null;
   const toggleShare = async (on: boolean) => {
     try { await share({ data: { id: idea.id, enabled: on } }); onChanged(); toast.success(on ? "Public link created" : "Public link turned off"); }
@@ -511,6 +577,20 @@ function IdeaDetail({ idea, theme, items, author, canEdit, isTeam, meId, teams, 
         {author && <p className="text-xs text-muted-foreground">Shared by {author} · {new Date(idea.created_at).toLocaleString()}</p>}
         {idea.summary && <p className="text-sm text-muted-foreground">{idea.summary}</p>}
       </SheetHeader>
+      {(files.length > 0 || canEdit) && (
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Files &amp; images</h4>
+            {canEdit && (
+              <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-medium text-brand-teal hover:text-primary">
+                {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Paperclip className="h-3.5 w-3.5" />} Add files
+                <input type="file" multiple className="sr-only" disabled={uploading} onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }} />
+              </label>
+            )}
+          </div>
+          {files.length ? <FileGallery files={files} onDelete={canEdit ? removeFile : undefined} /> : <p className="text-xs text-muted-foreground">No files yet.</p>}
+        </div>
+      )}
       {items.length > 0 && (
         <div>
           <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">To-dos</h4>
