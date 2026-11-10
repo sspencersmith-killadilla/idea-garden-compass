@@ -557,6 +557,7 @@ function IdeaDetail({ idea, theme, items, files, author, canEdit, isTeam, meId, 
     onChanged(); toast.success("Tags saved");
   };
   const del = async () => {
+    for (const f of files) await deleteIdeaFile(f);
     const { error } = await supabase.from("ideas").delete().eq("id", idea.id);
     if (error) { toast.error("Couldn't delete"); return; }
     onDeleted(); toast.success("Idea deleted");
