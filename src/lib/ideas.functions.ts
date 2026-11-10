@@ -5,11 +5,13 @@ import { organizeIdea } from "./organize.server";
 
 export const captureIdea = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { text: string }) => z.object({ text: z.string().trim().min(1).max(10000) }).parse(d))
+  .inputValidator((d: { text: string; teamId: string | null }) =>
+    z.object({ text: z.string().trim().min(1).max(10000), teamId: z.string().uuid().nullable() }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     const { data: row, error } = await context.supabase
       .from("ideas")
-      .insert({ user_id: context.userId, raw_text: data.text, source: "web" })
+      .insert({ user_id: context.userId, raw_text: data.text, source: "web", team_id: data.teamId })
       .select("id")
       .single();
     if (error || !row) throw new Error("Couldn't save your idea");
