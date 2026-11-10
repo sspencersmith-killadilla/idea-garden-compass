@@ -86,7 +86,7 @@ export async function organizeIdea(
   if (!theme) {
     const { data: created } = await db
       .from("themes")
-      .insert({ user_id: userId, name: themeName, hue: HUES[(themes?.length ?? 0) % HUES.length] })
+      .insert({ user_id: userId, name: themeName, hue: HUES[(themes?.length ?? 0) % HUES.length] ?? 30 })
       .select("id, name")
       .single();
     theme = created ?? undefined;

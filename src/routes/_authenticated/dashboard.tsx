@@ -305,7 +305,7 @@ function Grid({ ideas, themesById, itemsByIdea, onOpen }: { ideas: Idea[]; theme
 }
 
 function IdeaDetail({ idea, theme, items, onToggle, onReorganize, onChanged, onDeleted }: {
-  idea: Idea; theme?: Theme; items: Item[]; onToggle: (i: Item) => void; onReorganize: () => void; onChanged: () => void; onDeleted: () => void;
+  idea: Idea; theme: Theme | undefined; items: Item[]; onToggle: (i: Item) => void; onReorganize: () => void; onChanged: () => void; onDeleted: () => void;
 }) {
   const [tags, setTags] = useState(idea.tags.join(", "));
   const saveTags = async () => {
