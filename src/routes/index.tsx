@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Building2, MessagesSquare, Sparkles, Search, ListChecks, Lock } from "lucide-react";
+import { ArrowRight, BookOpen, Database, Building2, MessagesSquare, Sparkles, Search, ListChecks, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo, LogoMark } from "@/components/Logo";
 import { Skyline, PowerLine } from "@/components/City";
@@ -32,7 +32,10 @@ function Landing() {
     <div className="relative min-h-screen overflow-hidden">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
         <Logo />
-        <Button asChild><Link to="/auth">Sign in</Link></Button>
+        <div className="flex items-center gap-2">
+          <Button asChild variant="ghost"><a href="#manuals">Manual</a></Button>
+          <Button asChild><Link to="/auth">Sign in</Link></Button>
+        </div>
       </header>
       <main className="mx-auto max-w-6xl px-6 pb-24 pt-12">
         <div className="grid items-center gap-12 md:grid-cols-[1.4fr_1fr]">
@@ -58,6 +61,14 @@ function Landing() {
             </div>
           ))}
         </div>
+        <section id="manuals" className="mt-20 rounded-xl border bg-card p-6 shadow-[var(--shadow-card)] md:p-8">
+          <h2 className="road-underline font-display text-2xl font-extrabold text-primary">Manuals &amp; self-hosting</h2>
+          <p className="mt-3 max-w-2xl text-muted-foreground">Everything you need to use Common Ground, plus step-by-step instructions to install and run it on your own servers.</p>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Button asChild><a href="/manual/Common-Ground-User-Manual.md" download><BookOpen className="h-4 w-4" /> User &amp; install manual</a></Button>
+            <Button asChild variant="outline"><a href="/manual/schema.sql" download><Database className="h-4 w-4" /> Database setup file</a></Button>
+          </div>
+        </section>
       </main>
       <Skyline className="absolute inset-x-0 bottom-0 h-24" />
     </div>
