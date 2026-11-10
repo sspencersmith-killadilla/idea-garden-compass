@@ -1,14 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { ArrowRight, Building2, MessagesSquare, Sparkles, Search, ListChecks, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Mail, Sparkles, Search, ListChecks } from "lucide-react";
+import { Logo, LogoMark } from "@/components/Logo";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Idea Inbox — dump your thoughts, get them organized" },
-      { name: "description", content: "Type or email any idea. AI titles, tags, groups and pulls out to-dos into one searchable dashboard." },
-      { property: "og:title", content: "Idea Inbox — dump your thoughts, get them organized" },
-      { property: "og:description", content: "Type or email any idea. AI titles, tags, groups and pulls out to-dos." },
+      { title: "Common Ground — shared ideas for city teams" },
+      { name: "description", content: "Capture ideas with your department or city project team. AI titles, tags, groups and pulls out to-dos into one shared, searchable board." },
+      { property: "og:title", content: "Common Ground — shared ideas for city teams" },
+      { property: "og:description", content: "One shared, AI-organized idea board for departments and city project teams." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -17,50 +18,40 @@ export const Route = createFileRoute("/")({
 });
 
 const features = [
-  { icon: Sparkles, title: "Instantly organized", body: "Every idea gets a title, summary, and topic tags." },
-  { icon: ListChecks, title: "To-dos pulled out", body: "Action items become checkboxes you can tick off." },
-  { icon: Search, title: "Find anything", body: "Search, sort and filter by theme, tag or source." },
-  { icon: Mail, title: "Email it in", body: "Forward a thought to your personal inbox address." },
+  { icon: Building2, title: "Spaces for every team", body: "Departments, city projects or working groups. Invite people with a link." },
+  { icon: Sparkles, title: "Organized for you", body: "Every idea gets a title, summary, tags and a theme." },
+  { icon: ListChecks, title: "To-dos pulled out", body: "Action items become checkboxes the whole team can see." },
+  { icon: MessagesSquare, title: "Talk it through", body: "Comment on any idea to build on each other's thinking." },
+  { icon: Search, title: "Find anything", body: "Search and filter by theme, tag, person or source." },
+  { icon: Lock, title: "Your own notebook too", body: "Keep rough private thoughts until they're ready to share." },
 ];
 
 function Landing() {
   return (
     <div className="min-h-screen">
-      <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
-        <span className="font-display text-2xl font-extrabold tracking-tight">Idea Inbox<span className="text-primary">.</span></span>
-        <Button asChild variant="ghost"><Link to="/auth">Sign in</Link></Button>
+      <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
+        <Logo />
+        <Button asChild><Link to="/auth">Sign in</Link></Button>
       </header>
-      <main className="mx-auto max-w-6xl px-6 pb-24 pt-10">
-        <div className="grid items-center gap-12 md:grid-cols-[1.1fr_1fr]">
+      <main className="mx-auto max-w-6xl px-6 pb-24 pt-12">
+        <div className="grid items-center gap-12 md:grid-cols-[1.4fr_1fr]">
           <div>
-            <h1 className="font-display text-5xl font-extrabold leading-[1.02] tracking-tight md:text-7xl">
-              Brain dump.<br /><span className="italic text-primary">We'll sort it.</span>
+            <span className="inline-block rounded-full bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground">Ideas in · shared thinking out · for every team</span>
+            <h1 className="mt-6 font-display text-5xl font-extrabold leading-[1.05] tracking-tight text-primary md:text-6xl">
+              Every idea, <span className="text-gradient-brand">on common ground.</span>
             </h1>
-            <p className="mt-6 max-w-md text-lg text-muted-foreground">
-              Throw half-baked thoughts in as fast as they come. Idea Inbox turns them into a tidy, searchable board of themes, tags and to-dos.
+            <p className="mt-6 max-w-lg text-lg text-muted-foreground">
+              Your department or project team drops in ideas as they come. Common Ground organizes them into one shared board of themes, tags and to-dos everyone can search.
             </p>
-            <div className="mt-8 flex gap-3">
-              <Button asChild size="lg"><Link to="/auth">Start capturing — it's free</Link></Button>
-            </div>
+            <Button asChild size="lg" className="mt-8"><Link to="/auth">Start your team space <ArrowRight className="h-4 w-4" /></Link></Button>
           </div>
-          <div className="relative h-80">
-            {[
-              { t: "Podcast about small-town diners", tag: "side projects", rot: "-rotate-3", pos: "left-0 top-4", hue: 25 },
-              { t: "Call Sam re: kitchen quote", tag: "home", rot: "rotate-2", pos: "right-0 top-20", hue: 145 },
-              { t: "Q3 pricing: try annual discount", tag: "work", rot: "-rotate-1", pos: "left-10 bottom-0", hue: 210 },
-            ].map((c) => (
-              <div key={c.t} style={{ ["--hue" as string]: c.hue }} className={`theme-edge absolute w-64 rounded-lg bg-card p-5 shadow-[var(--shadow-lift)] ${c.rot} ${c.pos}`}>
-                <p className="font-display text-lg font-semibold leading-snug">{c.t}</p>
-                <span className="theme-chip mt-3 inline-block rounded-full px-2.5 py-0.5 text-xs font-medium">{c.tag}</span>
-              </div>
-            ))}
-          </div>
+          <div className="flex justify-center"><LogoMark className="h-56 w-56" /></div>
         </div>
-        <div className="mt-24 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-24 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {features.map((f) => (
-            <div key={f.title} className="rounded-xl border bg-card p-6">
-              <f.icon className="h-5 w-5 text-primary" />
-              <h3 className="mt-4 font-display text-lg font-semibold">{f.title}</h3>
+            <div key={f.title} className="rounded-xl border bg-card p-6 shadow-[var(--shadow-card)]">
+              <f.icon className="h-5 w-5 text-brand-green" />
+              <h3 className="mt-4 font-display text-lg font-bold text-primary">{f.title}</h3>
               <p className="mt-1 text-sm text-muted-foreground">{f.body}</p>
             </div>
           ))}
