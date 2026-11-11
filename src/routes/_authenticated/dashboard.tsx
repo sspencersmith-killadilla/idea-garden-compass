@@ -14,6 +14,7 @@ import { Logo } from "@/components/Logo";
 import { FileGallery } from "@/components/IdeaFiles";
 import { uploadIdeaFiles, deleteIdeaFile, withSignedUrls, isImage, MAX_FILE_BYTES, type IdeaFile } from "@/lib/files";
 import { BuildStageBadge, CityDoodle, CityLoading, Skyline, PowerLine, buildBurst, greeting, useRotatingPrompt } from "@/components/City";
+import { CityMap } from "@/components/CityMap";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -134,7 +135,7 @@ function Dashboard() {
   const [hello, setHello] = useState("");
   useEffect(() => { setHello(greeting(me?.name)); }, [me?.name]);
   const [q, setQ] = useState("");
-  const [view, setView] = useState<"all" | "timeline" | "themes" | "todos">("all");
+  const [view, setView] = useState<"all" | "timeline" | "map" | "themes" | "todos">("all");
   const [sort, setSort] = useState("newest");
   const [tag, setTag] = useState("any");
   const [theme, setTheme] = useState("any");
@@ -332,7 +333,7 @@ function Dashboard() {
           </div>
 
           <Tabs value={view} onValueChange={(v) => setView(v as typeof view)} className="mt-5">
-            <TabsList><TabsTrigger className="tab-road" value="all">All ideas</TabsTrigger><TabsTrigger className="tab-road" value="timeline">Timeline</TabsTrigger><TabsTrigger className="tab-road" value="themes" title="Your city's districts">By theme</TabsTrigger><TabsTrigger className="tab-road" value="todos">To-dos</TabsTrigger></TabsList>
+            <TabsList><TabsTrigger className="tab-road" value="all">All ideas</TabsTrigger><TabsTrigger className="tab-road" value="timeline">Timeline</TabsTrigger><TabsTrigger className="tab-road" value="map">City map</TabsTrigger><TabsTrigger className="tab-road" value="themes" title="Your city's districts">By theme</TabsTrigger><TabsTrigger className="tab-road" value="todos">To-dos</TabsTrigger></TabsList>
           </Tabs>
 
           {isLoading || meQ.isLoading ? (
@@ -350,6 +351,8 @@ function Dashboard() {
             <Grid ideas={filtered} themesById={themesById} itemsByIdea={itemsByIdea} filesByIdea={filesByIdea} author={author} onOpen={setSelected} />
           ) : view === "timeline" ? (
             <Timeline ideas={filtered} themesById={themesById} author={author} onOpen={setSelected} />
+          ) : view === "map" ? (
+            <CityMap ideas={filtered} themes={data.themes} itemsByIdea={itemsByIdea} onOpen={setSelected} />
           ) : view === "themes" ? (
             <div className="mt-6 space-y-10">
               {[...data.themes, { id: "", name: "Unsorted", hue: 230 }].map((t) => {
