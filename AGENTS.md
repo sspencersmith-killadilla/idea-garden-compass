@@ -32,3 +32,4 @@ use the editor.
 ## Project rules
 - AI idea organizing lives in `src/lib/organize.server.ts` and is shared by the web capture server function and the inbound-email route, so both sources produce identical cards.
 - Dashboard reads data client-side under `_authenticated` (ssr: false); RLS decides visibility: personal ideas (team_id null) are owner-only, team ideas use is_team_member/is_team_admin helpers. Team creation and joining go through security-definer RPCs (create_team, join_team).
+- Team joining uses per-email, single-use invites (team_invites + accept_invite RPC); invite sign-ups are created pre-confirmed server-side by signUpWithInvite, so project-wide email auto-confirm stays off.
