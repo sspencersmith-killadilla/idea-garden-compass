@@ -206,6 +206,50 @@ export type Database = {
         }
         Relationships: []
       }
+      team_invites: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          team_id: string
+          token: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          team_id: string
+          token?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          team_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_invites_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_members: {
         Row: {
           created_at: string
@@ -302,9 +346,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_invite: { Args: { _token: string }; Returns: string }
       can_edit_idea: { Args: { _idea: string }; Returns: boolean }
       can_view_idea: { Args: { _idea: string }; Returns: boolean }
       create_team: { Args: { _kind?: string; _name: string }; Returns: string }
+      get_invite: {
+        Args: { _token: string }
+        Returns: {
+          email: string
+          status: string
+          team_name: string
+        }[]
+      }
       get_public_idea: { Args: { _token: string }; Returns: Json }
       get_public_idea_files: {
         Args: { _token: string }
