@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedJournalRouteImport } from './routes/_authenticated/journal'
 import { Route as ITokenRouteImport } from './routes/i.$token'
+import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as JoinCodeRouteImport } from './routes/join.$code'
 import { Route as ApiPublicInboundEmailRouteImport } from './routes/api/public/inbound-email'
 
@@ -47,6 +48,11 @@ const ITokenRoute = ITokenRouteImport.update({
   path: '/i/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InviteTokenRoute = InviteTokenRouteImport.update({
+  id: '/invite/$token',
+  path: '/invite/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const JoinCodeRoute = JoinCodeRouteImport.update({
   id: '/join/$code',
   path: '/join/$code',
@@ -64,6 +70,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/journal': typeof AuthenticatedJournalRoute
   '/i/$token': typeof ITokenRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/join/$code': typeof JoinCodeRoute
   '/api/public/inbound-email': typeof ApiPublicInboundEmailRoute
 }
@@ -73,6 +80,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/journal': typeof AuthenticatedJournalRoute
   '/i/$token': typeof ITokenRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/join/$code': typeof JoinCodeRoute
   '/api/public/inbound-email': typeof ApiPublicInboundEmailRoute
 }
@@ -84,6 +92,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/journal': typeof AuthenticatedJournalRoute
   '/i/$token': typeof ITokenRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/join/$code': typeof JoinCodeRoute
   '/api/public/inbound-email': typeof ApiPublicInboundEmailRoute
 }
@@ -95,6 +104,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/journal'
     | '/i/$token'
+    | '/invite/$token'
     | '/join/$code'
     | '/api/public/inbound-email'
   fileRoutesByTo: FileRoutesByTo
@@ -104,6 +114,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/journal'
     | '/i/$token'
+    | '/invite/$token'
     | '/join/$code'
     | '/api/public/inbound-email'
   id:
@@ -114,6 +125,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/journal'
     | '/i/$token'
+    | '/invite/$token'
     | '/join/$code'
     | '/api/public/inbound-email'
   fileRoutesById: FileRoutesById
@@ -123,6 +135,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ITokenRoute: typeof ITokenRoute
+  InviteTokenRoute: typeof InviteTokenRoute
   JoinCodeRoute: typeof JoinCodeRoute
   ApiPublicInboundEmailRoute: typeof ApiPublicInboundEmailRoute
 }
@@ -171,6 +184,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ITokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/invite/$token': {
+      id: '/invite/$token'
+      path: '/invite/$token'
+      fullPath: '/invite/$token'
+      preLoaderRoute: typeof InviteTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/join/$code': {
       id: '/join/$code'
       path: '/join/$code'
@@ -206,6 +226,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ITokenRoute: ITokenRoute,
+  InviteTokenRoute: InviteTokenRoute,
   JoinCodeRoute: JoinCodeRoute,
   ApiPublicInboundEmailRoute: ApiPublicInboundEmailRoute,
 }

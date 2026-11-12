@@ -1,9 +1,5 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Logo } from "@/components/Logo";
-
-import { PENDING_INVITE_KEY } from "@/lib/invite";
 
 export const Route = createFileRoute("/join/$code")({
   ssr: false,
@@ -21,26 +17,11 @@ export const Route = createFileRoute("/join/$code")({
 });
 
 function Join() {
-  const { code } = Route.useParams();
-  const navigate = useNavigate();
-  const [err, setErr] = useState<string | null>(null);
-  useEffect(() => {
-    (async () => {
-      const { data } = await supabase.auth.getUser();
-      if (!data.user) {
-        sessionStorage.setItem(PENDING_INVITE_KEY, code);
-        navigate({ to: "/auth", replace: true });
-        return;
-      }
-      const { data: teamId, error } = await supabase.rpc("join_team", { _code: code });
-      if (error || !teamId) { setErr("This invite link isn't valid anymore. Ask your team admin for a new one."); return; }
-      navigate({ to: "/dashboard", search: { space: teamId }, replace: true });
-    })();
-  }, [code, navigate]);
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-4 text-center">
       <Logo />
-      <p className="text-muted-foreground">{err ?? "Joining your team…"}</p>
+      <p className="max-w-sm text-muted-foreground">Shared team links are no longer used. Ask your team admin to send you a personal invite for your email address.</p>
+      <Link to="/auth" className="text-sm underline">Go to sign in</Link>
     </div>
   );
 }

@@ -2,4 +2,5 @@
 - [x] Team spaces (departments / city projects), invite links, admin roles, comments
 - [x] Common Ground branding in the Civic Plexus / Relay style
 - [x] Timeline, journal, public links, send-to-team, email-in panel
+- [x] Personal email-specific invites that skip confirmation email
 - [ ] Email-in activation: waiting on Postmark inbound domain + INBOUND_EMAIL_SECRET from user

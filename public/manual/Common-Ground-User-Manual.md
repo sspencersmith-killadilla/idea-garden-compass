@@ -41,7 +41,7 @@ The **Journal** page lists every idea you wrote, in all spaces, grouped by month
 
 ### 6. Teams (departments, projects)
 - **Create a space**: space switcher → *New space* → name it and pick Department, City project or Team. You become its admin.
-- **Invite people**: open *Members* → copy the invite link and send it. Anyone signed in who opens it joins as a member.
+- **Invite people**: open *Members & invite* → type the person's email → **Create link**, then send them the link (text, chat or email). Each link works only for that email address, once, within 14 days. New people just choose a password — no confirmation email needed. Pending invites can be copied again or cancelled from the same panel.
 - **Roles**: *Admins* manage members, rename, share or remove any idea. *Members* add ideas, comment, and edit their own.
 - Team ideas are visible to all members; your Notebook never is.
 
@@ -191,6 +191,7 @@ update team_members set role='admin' where team_id='<team uuid>' and user_id='<u
 | Ideas stay "pending" | AI key/base URL/model wrong — check server logs. |
 | "Expected 3 parts in JWT" | You're using new `sb_publishable_` keys with an old client; update `@supabase/supabase-js`, or use the legacy anon key. |
 | Google sign-in error | Provider not enabled, or redirect URL not whitelisted. |
-| Can't see team ideas | User isn't a member — resend the invite link. |
+| Can't see team ideas | User isn't a member — create a new personal invite for their email. |
+| "This invite is for another email" | They're signed in with a different account; sign out and use the invited address. |
 | Email-in panel says not connected | Both `INBOUND_EMAIL_*` variables must be set. |
 | Public link 404s | Sharing was turned off, or `schema.sql` grant for `get_public_idea` missing. |
