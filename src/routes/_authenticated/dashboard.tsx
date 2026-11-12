@@ -147,11 +147,11 @@ function Dashboard() {
   const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
-    const code = sessionStorage.getItem(PENDING_INVITE_KEY);
-    if (!code) return;
+    const token = sessionStorage.getItem(PENDING_INVITE_KEY);
+    if (!token) return;
     sessionStorage.removeItem(PENDING_INVITE_KEY);
-    supabase.rpc("join_team", { _code: code }).then(({ data: tid, error }) => {
-      if (error || !tid) { toast.error("That invite link isn't valid anymore."); return; }
+    supabase.rpc("accept_invite", { _token: token }).then(({ data: tid, error }) => {
+      if (error || !tid) { toast.error(error?.message.includes("wrong email") ? "That invite is for a different email address." : "That invite link isn't valid anymore."); return; }
       qc.invalidateQueries({ queryKey: ["me"] });
       navigate({ to: "/dashboard", search: { space: tid } });
       toast.success("You joined the team");
@@ -682,7 +682,7 @@ function NewTeamDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpe
     setBusy(false);
     if (error || !data) { toast.error("Couldn't create the space"); return; }
     setName(""); onOpenChange(false); onCreated(data);
-    toast.success("Space created — invite your team from Members & invite");
+    toast.success("Space created — invite people from Members & invite");
   };
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -709,15 +709,7 @@ function TeamSettings({ open, onOpenChange, team, members, meId, onChanged, onLe
   open: boolean; onOpenChange: (o: boolean) => void; team: Team; members: Member[]; meId: string; onChanged: () => void; onLeft: () => void;
 }) {
   const isAdmin = team.role === "admin";
-  const link = typeof window !== "undefined" ? `${window.location.origin}/join/${team.invite_code}` : "";
   const admins = members.filter((m) => m.role === "admin").length;
-  const copy = async () => { await navigator.clipboard.writeText(link); toast.success("Invite link copied"); };
-  const resetLink = async () => {
-    const code = Array.from(crypto.getRandomValues(new Uint8Array(6))).map((b) => b.toString(16).padStart(2, "0")).join("");
-    const { error } = await supabase.from("teams").update({ invite_code: code }).eq("id", team.id);
-    if (error) { toast.error("Couldn't reset link"); return; }
-    onChanged(); toast.success("Old link no longer works");
-  };
   const setRole = async (uid: string, role: string) => {
     const { error } = await supabase.from("team_members").update({ role }).eq("team_id", team.id).eq("user_id", uid);
     if (error) { toast.error("Couldn't change role"); return; }
@@ -733,14 +725,7 @@ function TeamSettings({ open, onOpenChange, team, members, meId, onChanged, onLe
       <SheetContent className="overflow-y-auto">
         <SheetHeader><SheetTitle className="font-display text-xl text-primary">{team.name}</SheetTitle></SheetHeader>
         <div className="space-y-6 px-4 pb-8">
-          {isAdmin && (
-            <div>
-              <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Invite link</h4>
-              <p className="mb-2 text-sm text-muted-foreground">Anyone with this link can join as a member.</p>
-              <div className="flex gap-2"><Input readOnly value={link} className="font-mono text-xs" /><Button variant="secondary" onClick={copy}><Copy className="h-4 w-4" /></Button></div>
-              <button onClick={resetLink} className="mt-2 text-xs text-muted-foreground underline">Reset link</button>
-            </div>
-          )}
+          {isAdmin && <InvitePanel teamId={team.id} />}
           <div>
             <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Members · {members.length}</h4>
             <ul className="divide-y rounded-lg border">
@@ -771,6 +756,63 @@ function TeamSettings({ open, onOpenChange, team, members, meId, onChanged, onLe
         </div>
       </SheetContent>
     </Sheet>
+  );
+}
+
+type Invite = { id: string; email: string; token: string; created_at: string; expires_at: string; accepted_at: string | null };
+
+function InvitePanel({ teamId }: { teamId: string }) {
+  const [email, setEmail] = useState("");
+  const [invites, setInvites] = useState<Invite[]>([]);
+  const load = async () => {
+    const { data } = await supabase.from("team_invites").select("id, email, token, created_at, expires_at, accepted_at").eq("team_id", teamId).order("created_at", { ascending: false });
+    setInvites(data ?? []);
+  };
+  useEffect(() => { void load(); }, [teamId]); // eslint-disable-line react-hooks/exhaustive-deps
+  const linkFor = (t: string) => `${window.location.origin}/invite/${t}`;
+  const copy = async (t: string) => { await navigator.clipboard.writeText(linkFor(t)); toast.success("Invite link copied"); };
+  const create = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const clean = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)) { toast.error("Enter a valid email"); return; }
+    const { data: u } = await supabase.auth.getUser();
+    const { data, error } = await supabase.from("team_invites").insert({ team_id: teamId, email: clean, invited_by: u.user!.id }).select("token").single();
+    if (error || !data) { toast.error("Couldn't create invite"); return; }
+    setEmail(""); await load();
+    try { await navigator.clipboard.writeText(linkFor(data.token)); toast.success(`Invite for ${clean} copied — send it to them`); } catch { toast.success("Invite created"); }
+  };
+  const cancel = async (id: string) => {
+    const { error } = await supabase.from("team_invites").delete().eq("id", id);
+    if (error) { toast.error("Couldn't cancel"); return; }
+    void load();
+  };
+  const status = (i: Invite) => i.accepted_at ? "accepted" : new Date(i.expires_at) < new Date() ? "expired" : "waiting";
+  return (
+    <div>
+      <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Invite by email</h4>
+      <p className="mb-2 text-sm text-muted-foreground">Each link works only for that email, once, for 14 days. No confirmation email needed.</p>
+      <form onSubmit={create} className="flex gap-2">
+        <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@city.gov" required />
+        <Button type="submit" variant="secondary">Create link</Button>
+      </form>
+      {invites.length > 0 && (
+        <ul className="mt-3 divide-y rounded-lg border">
+          {invites.map((i) => {
+            const st = status(i);
+            return (
+              <li key={i.id} className="flex items-center gap-2 p-2.5 text-sm">
+                <div className="min-w-0 flex-1">
+                  <div className="truncate">{i.email}</div>
+                  <div className="text-xs capitalize text-muted-foreground">{st} · {new Date(i.created_at).toLocaleDateString()}</div>
+                </div>
+                {st === "waiting" && <Button size="icon" variant="ghost" onClick={() => copy(i.token)} aria-label="Copy link"><Copy className="h-4 w-4" /></Button>}
+                {st !== "accepted" && <Button size="icon" variant="ghost" onClick={() => cancel(i.id)} aria-label="Cancel invite"><Trash2 className="h-4 w-4" /></Button>}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
   );
 }
 
