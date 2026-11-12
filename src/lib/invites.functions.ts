@@ -19,7 +19,7 @@ export const signUpWithInvite = createServerFn({ method: "POST" })
     if (new Date(inv.expires_at) < new Date()) return { ok: false as const, error: "This invite has expired. Ask your admin for a new one." };
     const { error } = await supabaseAdmin.auth.admin.createUser({
       email: inv.email, password: data.password, email_confirm: true,
-      user_metadata: data.name ? { display_name: data.name, full_name: data.name } : undefined,
+      ...(data.name ? { user_metadata: { display_name: data.name, full_name: data.name } } : {}),
     });
     if (error) {
       const exists = /already|registered|exists/i.test(error.message);
