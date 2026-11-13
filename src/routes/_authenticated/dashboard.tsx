@@ -516,6 +516,8 @@ function IdeaDetail({ idea, theme, items, files, author, canEdit, isTeam, meId, 
   const [tags, setTags] = useState(idea.tags.join(", "));
   const [comment, setComment] = useState("");
   const share = useServerFn(setIdeaSharing);
+  const organizeFn = useServerFn(organizeIdeaFn);
+  const reorganizeAfterUpload = (id: string) => organizeFn({ data: { id } }).then(() => undefined, (e) => { toast.error((e as Error).message); });
   const move = useServerFn(moveIdeaToTeam);
   const [moveTo, setMoveTo] = useState("");
   const [moving, setMoving] = useState(false);
