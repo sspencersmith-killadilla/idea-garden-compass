@@ -516,6 +516,8 @@ function IdeaDetail({ idea, theme, items, files, author, canEdit, isTeam, meId, 
   const [tags, setTags] = useState(idea.tags.join(", "));
   const [comment, setComment] = useState("");
   const share = useServerFn(setIdeaSharing);
+  const organizeFn = useServerFn(organizeIdeaFn);
+  const reorganizeAfterUpload = (id: string) => organizeFn({ data: { id } }).then(() => undefined, (e) => { toast.error((e as Error).message); });
   const move = useServerFn(moveIdeaToTeam);
   const [moveTo, setMoveTo] = useState("");
   const [moving, setMoving] = useState(false);
@@ -526,8 +528,9 @@ function IdeaDetail({ idea, theme, items, files, author, canEdit, isTeam, meId, 
     setUploading(true);
     const failed = await uploadIdeaFiles(idea.id, meId, arr);
     setUploading(false);
-    if (failed.length) toast.error(`Couldn't attach: ${failed.join(", ")}`); else toast.success(arr.length === 1 ? "File attached" : "Files attached");
+    if (failed.length) toast.error(`Couldn't attach: ${failed.join(", ")}`); else toast.success(arr.length === 1 ? "File attached — updating summary…" : "Files attached — updating summary…");
     onChanged();
+    if (failed.length < arr.length) reorganizeAfterUpload(idea.id).finally(onChanged);
   };
   const removeFile = async (f: IdeaFile) => { await deleteIdeaFile(f); onChanged(); toast.success("File removed"); };
   const shareUrl = idea.share_token && typeof window !== "undefined" ? `${window.location.origin}/i/${idea.share_token}` : null;
