@@ -18,6 +18,7 @@ export async function runOrganizer(
   rawText: string,
   existingTags: string[],
   existingThemes: string[],
+  attachments: Attachment[] = [],
 ): Promise<Organized> {
   const apiKey = process.env["LOVABLE_API_KEY"];
   if (!apiKey) throw new Error("AI is not configured");
@@ -33,7 +34,13 @@ export async function runOrganizer(
     messages: [
       {
         role: "user",
-        content: `Existing tags: ${existingTags.join(", ") || "(none)"}\nExisting themes: ${existingThemes.join(", ") || "(none)"}\n\nIdea:\n${rawText.slice(0, 8000)}`,
+        content: [
+          {
+            type: "text",
+            text: `Existing tags: ${existingTags.join(", ") || "(none)"}\nExisting themes: ${existingThemes.join(", ") || "(none)"}\n\nIdea:\n${rawText.slice(0, 8000)}${attachments.length ? "\n\nThe idea includes attached files below. Read them and fold their key content into the title, summary, tags and action items." : ""}`,
+          },
+          ...attachmentParts(attachments),
+        ],
       },
     ],
     output: Output.object({ schema }),
@@ -48,6 +55,34 @@ export async function runOrganizer(
     },
   });
   return (await result.output) as Organized;
+}
+
+export type Attachment = { name: string; mime: string; bytes: Uint8Array };
+
+const TEXT_MIME = /^(text\/|application\/(json|xml|csv|x-yaml|yaml|markdown))/;
+const MAX_PARSE_BYTES = 15 * 1024 * 1024;
+
+function attachmentParts(files: Attachment[]) {
+  const parts: Array<
+    | { type: "text"; text: string }
+    | { type: "image"; image: Uint8Array; mediaType: string }
+    | { type: "file"; data: Uint8Array; mediaType: string; filename: string }
+  > = [];
+  let images = 0;
+  for (const f of files) {
+    if (f.mime.startsWith("image/") && images < 10) {
+      images++;
+      parts.push({ type: "text", text: `Attached image: ${f.name}` });
+      parts.push({ type: "image", image: f.bytes, mediaType: f.mime });
+    } else if (f.mime === "application/pdf") {
+      parts.push({ type: "file", data: f.bytes, mediaType: f.mime, filename: f.name });
+    } else if (TEXT_MIME.test(f.mime) || /\.(txt|md|csv|json)$/i.test(f.name)) {
+      parts.push({ type: "text", text: `Attached file "${f.name}":\n${new TextDecoder().decode(f.bytes).slice(0, 20000)}` });
+    } else {
+      parts.push({ type: "text", text: `Attached file (contents not readable): ${f.name}` });
+    }
+  }
+  return parts;
 }
 
 const HUES = [25, 145, 210, 330, 60, 265, 175, 5, 95, 290];
@@ -75,9 +110,17 @@ export async function organizeIdea(
   const tagSet = new Set<string>();
   tagRows?.forEach((r) => r.tags.forEach((t) => tagSet.add(t)));
 
+  const attachments: Attachment[] = [];
+  const { data: fileRows } = await db.from("idea_files").select("path, name, mime, size").eq("idea_id", ideaId).limit(15);
+  for (const f of fileRows ?? []) {
+    if (f.size > MAX_PARSE_BYTES) continue;
+    const { data: blob } = await db.storage.from("idea-files").download(f.path);
+    if (blob) attachments.push({ name: f.name, mime: f.mime, bytes: new Uint8Array(await blob.arrayBuffer()) });
+  }
+
   let org: Organized;
   try {
-    org = await runOrganizer(idea.raw_text, [...tagSet], (themes ?? []).map((t) => t.name));
+    org = await runOrganizer(idea.raw_text, [...tagSet], (themes ?? []).map((t) => t.name), attachments);
   } catch (e) {
     console.error("organize failed", e);
     await db.from("ideas").update({ status: "failed" }).eq("id", ideaId);
